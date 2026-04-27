@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四象限編輯器 ｜ Quadrant Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #efe3c7;
+    --paper-deep:   #e3d4ad;
+    --paper-light:  #f8efd8;
+    --paper-edge:   #d8c79a;
+    --ink:          #2b1d0e;
+    --ink-soft:     #5d4a31;
+    --ink-mute:     #8d785a;
+    --line:         #b9a374;
+    --line-soft:    #d2c094;
+    --accent:       #b34d3a;
+    --accent-warm:  #c97f4e;
+    --accent-deep:  #8a3528;
+    --shadow-sm:    0 1px 0 rgba(45,30,10,.04), 0 2px 6px rgba(45,30,10,.06);
+    --shadow:       0 1px 2px rgba(45,30,10,.08), 0 8px 24px rgba(45,30,10,.07);
+    --shadow-lg:    0 4px 12px rgba(45,30,10,.10), 0 24px 60px rgba(45,30,10,.14);
+    --r-sm: 4px; --r-md: 8px; --r-lg: 14px; --r-xl: 22px;
+    --font-display: 'Fraunces', 'Noto Serif TC', Georgia, serif;
+    --font-body:    'Bricolage Grotesque', 'Noto Sans TC', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 18% 12%, rgba(255,250,235,.55) 0%, transparent 45%),
+      radial-gradient(circle at 82% 88%, rgba(170,130,70,.10) 0%, transparent 55%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.27 0 0 0 0 0.18 0 0 0 0 0.06 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    overflow: hidden;
+  }
+
+  button, input, select, textarea {
+    font: inherit; color: inherit;
+  }
+
+  /* ========= TOP BAR ========= */
+  header {
+    height: 56px;
+    padding: 0 22px;
+    display: flex; align-items: center; gap: 18px;
+    border-bottom: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, rgba(248,239,216,.85) 0%, rgba(239,227,199,.7) 100%);
+    backdrop-filter: blur(6px);
+    position: relative; z-index: 5;
+  }
+  .brand {
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .brand-mark {
+    width: 26px; height: 26px;
+    display: inline-grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+    gap: 2px; align-self: center;
+  }
+  .brand-mark span { background: var(--ink); border-radius: 2px; }
+  .brand-mark span:nth-child(1) { background: var(--accent); }
+  .brand-mark span:nth-child(4) { background: var(--ink-soft); }
+  .brand h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -.01em;
+    margin: 0;
+    font-variation-settings: "opsz" 36, "SOFT" 50;
+  }
+  .brand .sub {
+    font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-weight: 500;
+  }
+  header .spacer { flex: 1; }
+  header .actions { display: flex; gap: 6px; }
+
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: var(--paper-light);
+    color: var(--ink); cursor: pointer;
+    padding: 7px 14px; font-size: 13px; font-weight: 500;
+    border-radius: var(--r-md);
+    transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
+    font-family: var(--font-body);
+  }
+  .btn:hover { background: #fff7e0; border-color: var(--ink-mute); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--ink); color: var(--paper-light); border-color: var(--ink); }
+  .btn.primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); color: #fff7e0; }
+  .btn.ghost { background: transparent; }
+  .btn.tiny { padding: 4px 9px; font-size: 12px; border-radius: var(--r-sm); }
+  .btn.icon-only { padding: 6px 8px; }
+
+  /* ========= MAIN LAYOUT ========= */
+  main {
+    height: calc(100vh - 56px);
+    display: grid;
+    grid-template-columns: 380px 1fr;
+  }
+
+  aside.editor {
+    overflow-y: auto;
+    border-right: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, rgba(248,239,216,.45) 0%, rgba(239,227,199,.2) 100%);
+    padding-bottom: 80px;
+  }
+  aside.editor::-webkit-scrollbar { width: 8px; }
+  aside.editor::-webkit-scrollbar-thumb { background: var(--paper-edge); border-radius: 4px; }
+  aside.editor::-webkit-scrollbar-track { background: transparent; }
+
+  .panel {
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .panel summary {
+    list-style: none;
+    padding: 14px 20px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    user-select: none;
+    transition: background 100ms ease;
+  }
+  .panel summary:hover { background: rgba(255,247,224,.4); }
+  .panel summary::-webkit-details-marker { display: none; }
+  .panel summary::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-right: 1.5px solid var(--ink-soft);
+    border-bottom: 1.5px solid var(--ink-soft);
+    transform: rotate(-45deg);
+    transition: transform 160ms ease;
+    margin-left: 2px;
+  }
+  .panel[open] summary::before { transform: rotate(45deg); }
+  .panel summary h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: .01em;
+    flex: 1;
+  }
+  .panel summary .count {
+    color: var(--ink-mute);
+    font-size: 12px;
+    font-feature-settings: "tnum";
+  }
+  .panel-body {
+    padding: 4px 20px 20px;
+  }
+
+  /* ========= FORM CONTROLS ========= */
+  .field {
+    display: flex; flex-direction: column; gap: 5px;
+    margin-bottom: 12px;
+  }
+  .field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--ink-mute);
+    font-weight: 600;
+  }
+  .field-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  input[type="text"], input[type="url"], textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+    background: var(--paper-light);
+    font-size: 13px;
+    transition: border-color 100ms ease, background 100ms ease;
+  }
+  input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff8e0;
+  }
+  textarea { resize: vertical; min-height: 60px; font-family: var(--font-mono); font-size: 12px; }
+
+  /* slider */
+  .slider-row {
+    display: grid;
+    grid-template-columns: 1fr 46px;
+    align-items: center; gap: 10px;
+  }
+  .slider-row .v {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: right;
+    font-feature-settings: "tnum";
+  }
+  input[type="range"] {
+    appearance: none; -webkit-appearance: none;
+    width: 100%; height: 22px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 3px;
+    background: linear-gradient(90deg, var(--line) 0%, var(--line-soft) 100%);
+    border-radius: 2px;
+  }
+  input[type="range"]::-moz-range-track {
+    height: 3px; background: var(--line); border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none; -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 2px solid var(--paper-light);
+    box-shadow: 0 1px 3px rgba(45,30,10,.3);
+    margin-top: -6px;
+    cursor: grab;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ink); border: 2px solid var(--paper-light);
+    cursor: grab;
+  }
+  input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; background: var(--accent); }
+
+  /* color picker */
+  .color-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+  }
+  .color-swatch {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--paper-light);
+    border-radius: var(--r-md);
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: border-color 100ms ease;
+  }
+  .color-swatch:hover { border-color: var(--ink-mute); }
+  .color-swatch input[type="color"] {
+    appearance: none; -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border: 1px solid rgba(0,0,0,.15);
+    border-radius: 4px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .color-swatch input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+  .color-swatch input[type="color"]::-moz-color-swatch { border: none; border-radius: 3px; }
+  .color-swatch span { color: var(--ink-soft); }
+
+  /* character row */
+  .char-list {
+    display: flex; flex-direction: column;
+    gap: 8px;
+  }
+  .char-row {
+    display: grid;
+    grid-template-columns: 18px 36px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--paper-light);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+    transition: border-color 100ms ease;
+  }
+  .char-row.editing { border-color: var(--accent); background: #fff8e0; }
+  .char-row .drag-handle {
+    cursor: grab;
+    color: var(--ink-mute);
+    font-size: 16px;
+    user-select: none;
+    line-height: 1;
+    text-align: center;
+  }
+  .char-row .drag-handle:active { cursor: grabbing; }
+  .char-row .avatar-thumb {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--paper-deep);
+    border: 1px solid var(--line-soft);
+    background-size: cover; background-position: center;
+    display: grid; place-items: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  .char-row .name {
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .char-row .actions { display: flex; gap: 2px; }
+  .char-row .actions button {
+    width: 24px; height: 24px;
+    padding: 0;
+    border: none; background: transparent;
+    cursor: pointer; border-radius: 4px;
+    color: var(--ink-mute);
+    transition: background 100ms ease, color 100ms ease;
+    display: grid; place-items: center;
+  }
+  .char-row .actions button:hover { background: rgba(45,30,10,.07); color: var(--ink); }
+  .char-row .actions button.del:hover { background: rgba(179,77,58,.12); color: var(--accent-deep); }
+
+  .char-detail {
+    grid-column: 1 / -1;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line-soft);
+    margin-top: 4px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .char-row.editing .char-detail { display: flex; }
+
+  .add-char-row { display: flex; gap: 6px; margin-top: 10px; }
+  .add-char-row .btn { flex: 1; }
+
+  /* ========= PREVIEW AREA ========= */
+  section.preview {
+    overflow: hidden;
+    position: relative;
+    display: flex; flex-direction: column;
+    background: var(--paper);
+  }
+  .preview-toolbar {
+    height: 42px;
+    padding: 0 16px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--line-soft);
+    background: rgba(248,239,216,.4);
+  }
+  .preview-toolbar .label {
+    font-size: 11px; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--ink-mute); font-weight: 500;
+  }
+  .preview-toolbar .spacer { flex: 1; }
+  .zoom-display { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); }
+
+  .preview-stage {
+    flex: 1;
+    display: grid; place-items: center;
+    overflow: auto;
+    padding: 24px;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,247,224,.4) 0%, transparent 70%),
+      var(--paper);
+  }
+  .preview-stage::-webkit-scrollbar { width: 8px; height: 8px; }
+  .preview-stage::-webkit-scrollbar-thumb { background: var(--paper-edge); border-radius: 4px; }
+
+  /* ========= CHART ========= */
+  .chart-frame {
+    width: 1000px; height: 750px;
+    transform-origin: center center;
+    flex-shrink: 0;
+  }
+  .chart {
+    width: 100%; height: 100%;
+    position: relative;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .chart .chart-bg { position: absolute; inset: 0; z-index: 1; }
+  .chart .chart-title-area {
+    position: absolute;
+    top: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 5;
+    text-align: center;
+    pointer-events: none;
+  }
+  .chart .chart-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -.005em;
+    line-height: 1.1;
+    margin: 0;
+    font-variation-settings: "opsz" 56, "SOFT" 30;
+  }
+  .chart .chart-plot {
+    position: absolute;
+    inset: 110px 100px 60px 100px;
+    z-index: 2;
+  }
+  .chart .axis-x, .chart .axis-y {
+    position: absolute; background: currentColor;
+    z-index: 3;
+  }
+  .chart .axis-x {
+    left: 0; right: 0; top: 50%;
+    height: 1px;
+    transform: translateY(-50%);
+  }
+  .chart .axis-y {
+    top: 0; bottom: 0; left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+  }
+  .chart .quadrant-bg {
+    position: absolute;
+    width: 50%; height: 50%;
+    z-index: 1;
+  }
+  .chart .quadrant-bg.tl { top: 0; left: 0; }
+  .chart .quadrant-bg.tr { top: 0; right: 0; }
+  .chart .quadrant-bg.bl { bottom: 0; left: 0; }
+  .chart .quadrant-bg.br { bottom: 0; right: 0; }
+
+  .chart .axis-label {
+    position: absolute;
+    z-index: 4;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .chart .axis-label.x-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 14px; }
+  .chart .axis-label.x-right { left: 100%;  top: 50%; transform: translateY(-50%); margin-left: 14px; }
+  .chart .axis-label.y-top   { left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 10px; }
+  .chart .axis-label.y-bot   { left: 50%; top: 100%;    transform: translateX(-50%); margin-top: 10px; }
+
+  .chart .quadrant-label {
+    position: absolute;
+    z-index: 4;
+    padding: 6px 14px;
+    border-radius: var(--r-md);
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+  .chart .character {
+    position: absolute;
+    z-index: 6;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    user-select: none;
+    touch-action: none;
+  }
+  .chart .character:active { cursor: grabbing; z-index: 7; }
+  .chart .character.dragging {
+    z-index: 8;
+    filter: drop-shadow(0 4px 10px rgba(45,30,10,.3));
+  }
+  .chart .character .avatar {
+    border-radius: 50%;
+    background-size: cover; background-position: center;
+    border: 2px solid currentColor;
+    background-color: var(--paper-deep);
+    display: grid; place-items: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+  .chart .character .char-name {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  /* ========= EXPORT DIALOG ========= */
+  dialog#export-dialog {
+    border: none;
+    padding: 0;
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+    background: var(--paper-light);
+    color: var(--ink);
+    width: min(90vw, 820px);
+    max-height: 86vh;
+    overflow: hidden;
+    font-family: var(--font-body);
+  }
+  dialog#export-dialog::backdrop {
+    background: rgba(40,28,12,.5);
+    backdrop-filter: blur(4px);
+  }
+  .dlg-header {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .dlg-header h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    flex: 1;
+  }
+  .dlg-tabs {
+    display: flex; gap: 2px;
+    padding: 0 22px;
+    border-bottom: 1px solid var(--line-soft);
+    background: rgba(239,227,199,.4);
+  }
+  .dlg-tab {
+    appearance: none;
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    padding: 12px 14px;
+    font-size: 13px; font-weight: 500;
+    color: var(--ink-mute);
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 100ms ease, border-color 100ms ease;
+  }
+  .dlg-tab:hover { color: var(--ink); }
+  .dlg-tab.active { color: var(--ink); border-color: var(--accent); }
+  .dlg-body {
+    padding: 18px 22px;
+    overflow-y: auto;
+    max-height: calc(86vh - 130px);
+  }
+  .dlg-body pre {
+    background: #2b1d0e;
+    color: #f0e6cc;
+    border-radius: var(--r-md);
+    padding: 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.55;
+    overflow-x: auto;
+    margin: 0;
+    max-height: 360px;
+    overflow-y: auto;
+    white-space: pre;
+  }
+  .dlg-body .img-preview {
+    background: var(--paper);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+    padding: 10px;
+    text-align: center;
+  }
+  .dlg-body .img-preview img {
+    max-width: 100%;
+    max-height: 360px;
+    box-shadow: var(--shadow);
+  }
+  .dlg-actions {
+    padding: 14px 22px;
+    border-top: 1px solid var(--line-soft);
+    display: flex; gap: 8px; justify-content: flex-end;
+    background: rgba(239,227,199,.4);
+  }
+  .dlg-note {
+    font-size: 12px;
+    color: var(--ink-mute);
+    line-height: 1.5;
+    margin: 8px 0 14px;
+    padding: 10px 12px;
+    background: rgba(179,77,58,.05);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--paper-light);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease, transform 200ms ease;
+    z-index: 1000;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* hidden file input */
+  input[type="file"].hidden { display: none; }
+
+  /* small helpers */
+  .small-text { font-size: 11.5px; color: var(--ink-mute); margin-top: -4px; margin-bottom: 6px; }
+
+  /* mobile-ish responsive: hide editor */
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+    aside.editor { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-mark"><span></span><span></span><span></span><span></span></span>
+    <h1>四象限編輯器</h1>
+    <span class="sub">Quadrant Editor</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="actions">
+    <button class="btn ghost" id="btn-reset" title="重置為預設">重置</button>
+    <button class="btn ghost" id="btn-load-json">載入 JSON</button>
+    <input type="file" id="file-load-json" accept="application/json,.json" class="hidden">
+    <button class="btn" id="btn-save-json">存 JSON</button>
+    <button class="btn primary" id="btn-export">匯出 ↗</button>
+  </div>
+</header>
+
+<main>
+  <aside class="editor" id="editor">
+    <details class="panel" open>
+      <summary><h2>基本設定</h2></summary>
+      <div class="panel-body">
+        <div class="field">
+          <label>主標題</label>
+          <input type="text" id="f-title" maxlength="80">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>X 軸 · 左</label>
+            <input type="text" id="f-x-left" maxlength="20">
+          </div>
+          <div class="field">
+            <label>X 軸 · 右</label>
+            <input type="text" id="f-x-right" maxlength="20">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Y 軸 · 上</label>
+            <input type="text" id="f-y-top" maxlength="20">
+          </div>
+          <div class="field">
+            <label>Y 軸 · 下</label>
+            <input type="text" id="f-y-bot" maxlength="20">
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><h2>象限名稱</h2></summary>
+      <div class="panel-body" id="quad-fields"></div>
+    </details>
+
+    <details class="panel">
+      <summary><h2>配色</h2></summary>
+      <div class="panel-body">
+        <div class="color-grid" id="color-grid"></div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary>
+        <h2>角色</h2>
+        <span class="count" id="char-count-disp">0 個</span>
+      </summary>
+      <div class="panel-body">
+        <div class="field">
+          <label>角色數量</label>
+          <div class="slider-row">
+            <input type="range" id="f-char-count" min="0" max="40" step="1">
+            <span class="v" id="f-char-count-v">0</span>
+          </div>
+          <div class="small-text">調整數量會自動新增 / 移除尾端角色</div>
+        </div>
+        <div class="char-list" id="char-list"></div>
+        <div class="add-char-row">
+          <button class="btn" id="btn-add-char">＋ 新增角色</button>
+        </div>
+      </div>
+    </details>
+  </aside>
+
+  <section class="preview">
+    <div class="preview-toolbar">
+      <span class="label">預覽</span>
+      <span class="zoom-display" id="zoom-display">100%</span>
+      <div class="spacer"></div>
+      <button class="btn tiny ghost" id="btn-zoom-fit">符合視窗</button>
+      <button class="btn tiny ghost" id="btn-zoom-100">100%</button>
+    </div>
+    <div class="preview-stage" id="preview-stage">
+      <div class="chart-frame" id="chart-frame">
+        <div class="chart" id="chart"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="export-dialog">
+  <div class="dlg-header">
+    <h3>匯出</h3>
+    <button class="btn ghost icon-only" id="btn-dlg-close" aria-label="關閉">✕</button>
+  </div>
+  <nav class="dlg-tabs">
+    <button class="dlg-tab active" data-tab="html">純 HTML</button>
+    <button class="dlg-tab" data-tab="svg">SVG</button>
+    <button class="dlg-tab" data-tab="png">PNG</button>
+    <button class="dlg-tab" data-tab="jpg">JPG</button>
+    <button class="dlg-tab" data-tab="json">JSON</button>
+  </nav>
+  <div class="dlg-body" id="dlg-body"></div>
+  <div class="dlg-actions" id="dlg-actions"></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   STATE & DEFAULTS
+   ============================================================ */
+const STORAGE_KEY = 'quadrant-editor-state-v1';
+
+const DEFAULT_STATE = {
+  title: '四象限分析',
+  axes: {
+    xLeft: '好應付',
+    xRight: '好麻煩',
+    yTop: '坦率',
+    yBot: '不坦率'
+  },
+  quadrants: [
+    { id: 'tl', name: '坦率 × 好應付',  x: 18, y: 22 },
+    { id: 'tr', name: '坦率 × 好麻煩',  x: 82, y: 22 },
+    { id: 'bl', name: '不坦率 × 好應付', x: 18, y: 78 },
+    { id: 'br', name: '不坦率 × 好麻煩', x: 82, y: 78 }
+  ],
+  colors: {
+    background:  '#f4ead2',
+    quadTL:      '#e8d9b3',
+    quadTR:      '#e3c9a4',
+    quadBL:      '#ecdfba',
+    quadBR:      '#dfc591',
+    axis:        '#8d785a',
+    text:        '#2b1d0e',
+    labelBg:     '#f8efd8'
+  },
+  characters: [
+    { name: '示例 A', avatar: '', link: '', x: 30, y: 30, size: 56 },
+    { name: '示例 B', avatar: '', link: '', x: 70, y: 35, size: 56 },
+    { name: '示例 C', avatar: '', link: '', x: 50, y: 70, size: 56 }
+  ]
+};
+
+let state = clone(DEFAULT_STATE);
+let editingCharIndex = null;
+
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+/* ============================================================
+   PERSISTENCE
+   ============================================================ */
+function saveLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const loaded = JSON.parse(raw);
+    if (!loaded || !loaded.title) return false;
+    state = mergeDefaults(loaded);
+    return true;
+  } catch (e) { return false; }
+}
+function mergeDefaults(loaded) {
+  const merged = clone(DEFAULT_STATE);
+  if (loaded.title) merged.title = loaded.title;
+  if (loaded.axes) Object.assign(merged.axes, loaded.axes);
+  if (Array.isArray(loaded.quadrants) && loaded.quadrants.length === 4) merged.quadrants = loaded.quadrants;
+  if (loaded.colors) Object.assign(merged.colors, loaded.colors);
+  if (Array.isArray(loaded.characters)) merged.characters = loaded.characters;
+  return merged;
+}
+
+let saveTimer;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveLocal, 200);
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function escapeAttr(s) { return escapeHtml(s); }
+function clamp(v, mi, ma) { return Math.max(mi, Math.min(ma, v)); }
+function initialOf(s) {
+  if (!s) return '?';
+  const t = String(s).trim();
+  return t ? t.charAt(0).toUpperCase() : '?';
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ============================================================
+   PREVIEW RENDER
+   ============================================================ */
+const chartEl = document.getElementById('chart');
+
+function renderChart() {
+  const c = state.colors;
+  chartEl.style.color = c.text;
+
+  const quadName = (id) => state.quadrants.find(q => q.id === id);
+  const tl = quadName('tl'), tr = quadName('tr'), bl = quadName('bl'), br = quadName('br');
+
+  let html = '';
+  // background
+  html += `<div class="chart-bg" style="background:${c.background};"></div>`;
+  // 4 quadrant bgs
+  html += `<div class="quadrant-bg tl" style="background:${c.quadTL};"></div>`;
+  html += `<div class="quadrant-bg tr" style="background:${c.quadTR};"></div>`;
+  html += `<div class="quadrant-bg bl" style="background:${c.quadBL};"></div>`;
+  html += `<div class="quadrant-bg br" style="background:${c.quadBR};"></div>`;
+  // title
+  html += `<div class="chart-title-area"><h2 class="chart-title" style="color:${c.text};">${escapeHtml(state.title)}</h2></div>`;
+
+  // plot area
+  html += `<div class="chart-plot" style="color:${c.axis};">`;
+  // axes lines
+  html += `<div class="axis-x"></div><div class="axis-y"></div>`;
+  // axis labels
+  const lblStyle = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};`;
+  html += `<div class="axis-label x-left"  style="${lblStyle}">${escapeHtml(state.axes.xLeft)}</div>`;
+  html += `<div class="axis-label x-right" style="${lblStyle}">${escapeHtml(state.axes.xRight)}</div>`;
+  html += `<div class="axis-label y-top"   style="${lblStyle}">${escapeHtml(state.axes.yTop)}</div>`;
+  html += `<div class="axis-label y-bot"   style="${lblStyle}">${escapeHtml(state.axes.yBot)}</div>`;
+
+  // quadrant labels
+  for (const q of state.quadrants) {
+    html += `<div class="quadrant-label" style="left:${q.x}%;top:${q.y}%;background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};">${escapeHtml(q.name)}</div>`;
+  }
+
+  // characters
+  state.characters.forEach((ch, i) => {
+    const sz = ch.size || 56;
+    const avatarStyle = ch.avatar
+      ? `background-image:url('${escapeAttr(ch.avatar)}');`
+      : '';
+    const initial = ch.avatar ? '' : initialOf(ch.name);
+    html += `<div class="character" data-idx="${i}" style="left:${ch.x}%;top:${ch.y}%;color:${c.axis};">
+      <div class="avatar" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz * 0.4)}px;color:${c.text};${avatarStyle}">${escapeHtml(initial)}</div>
+      <div class="char-name" style="background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};">${escapeHtml(ch.name || '·')}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  chartEl.innerHTML = html;
+
+  attachCharacterDrag();
+}
+
+/* drag characters in preview */
+function attachCharacterDrag() {
+  const plot = chartEl.querySelector('.chart-plot');
+  if (!plot) return;
+  chartEl.querySelectorAll('.character').forEach(el => {
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const idx = parseInt(el.dataset.idx, 10);
+      const rect = plot.getBoundingClientRect();
+      el.classList.add('dragging');
+      el.setPointerCapture(e.pointerId);
+
+      const move = (ev) => {
+        const px = clamp((ev.clientX - rect.left) / rect.width * 100, 0, 100);
+        const py = clamp((ev.clientY - rect.top)  / rect.height * 100, 0, 100);
+        state.characters[idx].x = +px.toFixed(1);
+        state.characters[idx].y = +py.toFixed(1);
+        el.style.left = px + '%';
+        el.style.top  = py + '%';
+        // sync sliders if this char is being edited
+        if (editingCharIndex === idx) {
+          const xs = document.getElementById(`f-char-x-${idx}`);
+          const ys = document.getElementById(`f-char-y-${idx}`);
+          if (xs) { xs.value = px; xs.nextElementSibling.textContent = Math.round(px); }
+          if (ys) { ys.value = py; ys.nextElementSibling.textContent = Math.round(py); }
+        }
+      };
+      const up = (ev) => {
+        el.classList.remove('dragging');
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        try { el.releasePointerCapture(ev.pointerId); } catch (_) {}
+        scheduleSave();
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+  });
+}
+
+/* ============================================================
+   SIDEBAR BINDINGS
+   ============================================================ */
+function bindBasic() {
+  const fields = [
+    ['f-title',    v => state.title = v],
+    ['f-x-left',   v => state.axes.xLeft = v],
+    ['f-x-right',  v => state.axes.xRight = v],
+    ['f-y-top',    v => state.axes.yTop = v],
+    ['f-y-bot',    v => state.axes.yBot = v],
+  ];
+  for (const [id, setter] of fields) {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => {
+      setter(el.value);
+      renderChart();
+      scheduleSave();
+    });
+  }
+}
+
+function fillBasic() {
+  document.getElementById('f-title').value   = state.title;
+  document.getElementById('f-x-left').value  = state.axes.xLeft;
+  document.getElementById('f-x-right').value = state.axes.xRight;
+  document.getElementById('f-y-top').value   = state.axes.yTop;
+  document.getElementById('f-y-bot').value   = state.axes.yBot;
+}
+
+function buildQuadrantFields() {
+  const wrap = document.getElementById('quad-fields');
+  wrap.innerHTML = '';
+  const labels = { tl: '左上', tr: '右上', bl: '左下', br: '右下' };
+  state.quadrants.forEach((q, i) => {
+    const block = document.createElement('div');
+    block.style.cssText = 'margin-bottom:14px;';
+    block.innerHTML = `
+      <div class="field">
+        <label>${labels[q.id]} 名稱</label>
+        <input type="text" id="f-quad-name-${i}" value="${escapeAttr(q.name)}" maxlength="40">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>位置 X · ${q.x}%</label>
+          <div class="slider-row">
+            <input type="range" id="f-quad-x-${i}" min="0" max="100" step="1" value="${q.x}">
+            <span class="v">${q.x}</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>位置 Y · ${q.y}%</label>
+          <div class="slider-row">
+            <input type="range" id="f-quad-y-${i}" min="0" max="100" step="1" value="${q.y}">
+            <span class="v">${q.y}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(block);
+
+    document.getElementById(`f-quad-name-${i}`).addEventListener('input', e => {
+      state.quadrants[i].name = e.target.value;
+      renderChart(); scheduleSave();
+    });
+    const xS = document.getElementById(`f-quad-x-${i}`);
+    const yS = document.getElementById(`f-quad-y-${i}`);
+    xS.addEventListener('input', e => {
+      const v = +e.target.value;
+      state.quadrants[i].x = v;
+      xS.nextElementSibling.textContent = v;
+      xS.parentElement.previousElementSibling.textContent = `位置 X · ${v}%`;
+      renderChart(); scheduleSave();
+    });
+    yS.addEventListener('input', e => {
+      const v = +e.target.value;
+      state.quadrants[i].y = v;
+      yS.nextElementSibling.textContent = v;
+      yS.parentElement.previousElementSibling.textContent = `位置 Y · ${v}%`;
+      renderChart(); scheduleSave();
+    });
+  });
+}
+
+const COLOR_KEYS = [
+  ['background', '整體背景'],
+  ['quadTL',     '左上象限底色'],
+  ['quadTR',     '右上象限底色'],
+  ['quadBL',     '左下象限底色'],
+  ['quadBR',     '右下象限底色'],
+  ['axis',       '軸線顏色'],
+  ['text',       '文字顏色'],
+  ['labelBg',    '名稱底色']
+];
+
+function buildColorFields() {
+  const wrap = document.getElementById('color-grid');
+  wrap.innerHTML = '';
+  for (const [k, label] of COLOR_KEYS) {
+    const sw = document.createElement('label');
+    sw.className = 'color-swatch';
+    sw.innerHTML = `
+      <input type="color" id="c-${k}" value="${state.colors[k]}">
+      <span>${label}</span>
+    `;
+    wrap.appendChild(sw);
+    sw.querySelector('input').addEventListener('input', e => {
+      state.colors[k] = e.target.value;
+      renderChart(); scheduleSave();
+    });
+  }
+}
+
+function fillColors() {
+  for (const [k] of COLOR_KEYS) {
+    const el = document.getElementById('c-' + k);
+    if (el) el.value = state.colors[k];
+  }
+}
+
+/* ----- character list ----- */
+function buildCharList() {
+  const wrap = document.getElementById('char-list');
+  wrap.innerHTML = '';
+  document.getElementById('char-count-disp').textContent = `${state.characters.length} 個`;
+  const cnt = document.getElementById('f-char-count');
+  cnt.value = state.characters.length;
+  document.getElementById('f-char-count-v').textContent = state.characters.length;
+
+  state.characters.forEach((ch, i) => {
+    const row = document.createElement('div');
+    row.className = 'char-row' + (editingCharIndex === i ? ' editing' : '');
+    const initial = ch.avatar ? '' : initialOf(ch.name);
+    const avatarBg = ch.avatar
+      ? `background-image:url('${escapeAttr(ch.avatar)}');`
+      : '';
+    row.innerHTML = `
+      <span class="drag-handle" title="拖曳排序">⋮⋮</span>
+      <span class="avatar-thumb" style="${avatarBg}">${ch.avatar ? '' : escapeHtml(initial)}</span>
+      <span class="name">${escapeHtml(ch.name || '（未命名）')}</span>
+      <span class="actions">
+        <button data-act="up"   title="上移">▲</button>
+        <button data-act="down" title="下移">▼</button>
+        <button data-act="edit" title="編輯">✎</button>
+        <button data-act="del" class="del" title="刪除">✕</button>
+      </span>
+      <div class="char-detail">
+        <div class="field">
+          <label>角色名稱</label>
+          <input type="text" id="f-char-name-${i}" value="${escapeAttr(ch.name)}" maxlength="40">
+        </div>
+        <div class="field">
+          <label>頭像 URL</label>
+          <input type="url" id="f-char-avatar-${i}" value="${escapeAttr(ch.avatar)}" placeholder="images/a.png 或 https://...">
+        </div>
+        <div class="field">
+          <label>角色頁面連結</label>
+          <input type="url" id="f-char-link-${i}" value="${escapeAttr(ch.link)}" placeholder="留空則不產生超連結">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>X 位置</label>
+            <div class="slider-row">
+              <input type="range" id="f-char-x-${i}" min="0" max="100" step="0.5" value="${ch.x}">
+              <span class="v">${Math.round(ch.x)}</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Y 位置</label>
+            <div class="slider-row">
+              <input type="range" id="f-char-y-${i}" min="0" max="100" step="0.5" value="${ch.y}">
+              <span class="v">${Math.round(ch.y)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>頭像大小 · ${ch.size}px</label>
+          <div class="slider-row">
+            <input type="range" id="f-char-size-${i}" min="24" max="120" step="2" value="${ch.size}">
+            <span class="v">${ch.size}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(row);
+
+    // action buttons
+    row.querySelectorAll('.actions button').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const act = b.dataset.act;
+        if (act === 'up' && i > 0) {
+          [state.characters[i-1], state.characters[i]] = [state.characters[i], state.characters[i-1]];
+          if (editingCharIndex === i) editingCharIndex = i - 1;
+          else if (editingCharIndex === i - 1) editingCharIndex = i;
+        } else if (act === 'down' && i < state.characters.length - 1) {
+          [state.characters[i+1], state.characters[i]] = [state.characters[i], state.characters[i+1]];
+          if (editingCharIndex === i) editingCharIndex = i + 1;
+          else if (editingCharIndex === i + 1) editingCharIndex = i;
+        } else if (act === 'edit') {
+          editingCharIndex = (editingCharIndex === i) ? null : i;
+        } else if (act === 'del') {
+          state.characters.splice(i, 1);
+          if (editingCharIndex === i) editingCharIndex = null;
+          else if (editingCharIndex > i) editingCharIndex--;
+        }
+        buildCharList();
+        renderChart();
+        scheduleSave();
+      });
+    });
+
+    // row click toggles edit
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.char-detail') || e.target.closest('.actions')) return;
+      editingCharIndex = (editingCharIndex === i) ? null : i;
+      buildCharList();
+    });
+
+    // detail field bindings
+    if (editingCharIndex === i) {
+      document.getElementById(`f-char-name-${i}`).addEventListener('input', e => {
+        state.characters[i].name = e.target.value;
+        row.querySelector('.name').textContent = e.target.value || '（未命名）';
+        const initEl = row.querySelector('.avatar-thumb');
+        if (!state.characters[i].avatar) initEl.textContent = initialOf(e.target.value);
+        renderChart(); scheduleSave();
+      });
+      document.getElementById(`f-char-avatar-${i}`).addEventListener('input', e => {
+        state.characters[i].avatar = e.target.value;
+        const thumb = row.querySelector('.avatar-thumb');
+        if (e.target.value) {
+          thumb.style.backgroundImage = `url('${e.target.value.replace(/'/g, "\\'")}')`;
+          thumb.textContent = '';
+        } else {
+          thumb.style.backgroundImage = '';
+          thumb.textContent = initialOf(state.characters[i].name);
+        }
+        renderChart(); scheduleSave();
+      });
+      document.getElementById(`f-char-link-${i}`).addEventListener('input', e => {
+        state.characters[i].link = e.target.value;
+        scheduleSave();
+      });
+      ['x', 'y', 'size'].forEach(key => {
+        const el = document.getElementById(`f-char-${key}-${i}`);
+        el.addEventListener('input', e => {
+          const v = +e.target.value;
+          state.characters[i][key] = v;
+          el.nextElementSibling.textContent = Math.round(v);
+          if (key === 'size') {
+            el.parentElement.previousElementSibling.textContent = `頭像大小 · ${v}px`;
+          }
+          renderChart(); scheduleSave();
+        });
+      });
+    }
+  });
+}
+
+function bindCharCount() {
+  const cnt = document.getElementById('f-char-count');
+  cnt.addEventListener('input', e => {
+    const target = +e.target.value;
+    document.getElementById('f-char-count-v').textContent = target;
+    while (state.characters.length < target) {
+      state.characters.push({
+        name: `角色 ${state.characters.length + 1}`,
+        avatar: '', link: '',
+        x: 50, y: 50, size: 56
+      });
+    }
+    while (state.characters.length > target) state.characters.pop();
+    if (editingCharIndex !== null && editingCharIndex >= state.characters.length) editingCharIndex = null;
+    buildCharList();
+    renderChart();
+    scheduleSave();
+  });
+}
+
+function bindAddChar() {
+  document.getElementById('btn-add-char').addEventListener('click', () => {
+    state.characters.push({
+      name: `角色 ${state.characters.length + 1}`,
+      avatar: '', link: '',
+      x: 50, y: 50, size: 56
+    });
+    editingCharIndex = state.characters.length - 1;
+    buildCharList();
+    renderChart();
+    scheduleSave();
+    // scroll to the new row
+    const list = document.getElementById('char-list');
+    list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+/* ============================================================
+   ZOOM / FIT
+   ============================================================ */
+function setZoom(z) {
+  const frame = document.getElementById('chart-frame');
+  frame.style.transform = `scale(${z})`;
+  frame.style.width  = '1000px';
+  frame.style.height = '750px';
+  // adjust margin so scaled element occupies actual space
+  frame.style.margin = `${(z - 1) * 750 / 2}px ${(z - 1) * 1000 / 2}px`;
+  document.getElementById('zoom-display').textContent = Math.round(z * 100) + '%';
+}
+function fitZoom() {
+  const stage = document.getElementById('preview-stage');
+  const pad = 48;
+  const w = stage.clientWidth - pad;
+  const h = stage.clientHeight - pad;
+  const z = Math.min(w / 1000, h / 750, 1);
+  setZoom(z);
+}
+
+/* ============================================================
+   EXPORT — PURE HTML (Caveduck-strict)
+   ============================================================
+   Allowed tags: div, span, p, hr, b, i, img, br, a
+   Forbidden: <style>, <script>, id, class, data-*
+   Inline-style only.
+   font-size/padding/margin/text-shadow → rem
+   width/height/positions → px or %
+   ============================================================ */
+function buildPureHTML() {
+  const c = state.colors;
+  const W = 1000, H = 750;
+  const PLOT_T = 110, PLOT_R = 100, PLOT_B = 60, PLOT_L = 100;
+
+  const labelBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:8px;padding:.25rem .75rem;font-size:.75rem;font-weight:500;letter-spacing:.04em;white-space:nowrap`;
+  const quadLabelBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:8px;padding:.375rem .875rem;font-size:1rem;font-weight:500;white-space:nowrap;font-family:Georgia,'Noto Serif TC',serif`;
+  const charNameBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:999px;padding:.125rem .5rem;font-size:.75rem;font-weight:500;white-space:nowrap;margin-top:.25rem`;
+
+  let out = '';
+
+  // outer chart container
+  out += `<div style="position:relative;width:${W}px;height:${H}px;background:${c.background};border-radius:14px;box-shadow:0 .25rem .75rem rgba(45,30,10,.10),0 1.5rem 3.75rem rgba(45,30,10,.14);overflow:hidden;font-family:'Noto Sans TC',-apple-system,sans-serif;color:${c.text}">`;
+
+  // 4 quadrant backgrounds
+  out += `<div style="position:absolute;top:0;left:0;width:50%;height:50%;background:${c.quadTL}"></div>`;
+  out += `<div style="position:absolute;top:0;right:0;width:50%;height:50%;background:${c.quadTR}"></div>`;
+  out += `<div style="position:absolute;bottom:0;left:0;width:50%;height:50%;background:${c.quadBL}"></div>`;
+  out += `<div style="position:absolute;bottom:0;right:0;width:50%;height:50%;background:${c.quadBR}"></div>`;
+
+  // title
+  out += `<div style="position:absolute;top:24px;left:0;right:0;text-align:center;pointer-events:none">`;
+  out += `<span style="display:inline-block;font-size:1.75rem;font-weight:500;color:${c.text};font-family:Georgia,'Noto Serif TC',serif;letter-spacing:-.005em">${escapeHtml(state.title)}</span>`;
+  out += `</div>`;
+
+  // plot area
+  out += `<div style="position:absolute;top:${PLOT_T}px;right:${PLOT_R}px;bottom:${PLOT_B}px;left:${PLOT_L}px">`;
+
+  // axes
+  out += `<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:${c.axis};transform:translateY(-50%)"></div>`;
+  out += `<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:${c.axis};transform:translateX(-50%)"></div>`;
+
+  // axis labels (anchored outside the plot via right/left/top/bottom 100%)
+  out += `<div style="position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:.875rem;${labelBox}">${escapeHtml(state.axes.xLeft)}</div>`;
+  out += `<div style="position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:.875rem;${labelBox}">${escapeHtml(state.axes.xRight)}</div>`;
+  out += `<div style="position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:.625rem;${labelBox}">${escapeHtml(state.axes.yTop)}</div>`;
+  out += `<div style="position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:.625rem;${labelBox}">${escapeHtml(state.axes.yBot)}</div>`;
+
+  // quadrant labels
+  for (const q of state.quadrants) {
+    out += `<div style="position:absolute;left:${q.x}%;top:${q.y}%;transform:translate(-50%,-50%);${quadLabelBox}">${escapeHtml(q.name)}</div>`;
+  }
+
+  // characters
+  state.characters.forEach(ch => {
+    const sz = ch.size || 56;
+    const inner = ch.avatar
+      ? `<img src="${escapeAttr(ch.avatar)}" alt="${escapeAttr(ch.name)}" style="width:${sz}px;height:${sz}px;border-radius:50%;border:2px solid ${c.axis};display:block;object-fit:cover">`
+      : `<div style="width:${sz}px;height:${sz}px;border-radius:50%;border:2px solid ${c.axis};background:${c.labelBg};display:flex;align-items:center;justify-content:center;font-size:${(sz * 0.4 / 16).toFixed(3)}rem;font-weight:600;color:${c.text};font-family:Georgia,serif;box-sizing:border-box">${escapeHtml(initialOf(ch.name))}</div>`;
+
+    let charBlock = `<div style="display:flex;flex-direction:column;align-items:center">`;
+    charBlock += inner;
+    charBlock += `<div style="${charNameBox}">${escapeHtml(ch.name || '·')}</div>`;
+    charBlock += `</div>`;
+
+    if (ch.link) {
+      charBlock = `<a href="${escapeAttr(ch.link)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center">${inner}<div style="${charNameBox}">${escapeHtml(ch.name || '·')}</div></a>`;
+    }
+
+    out += `<div style="position:absolute;left:${ch.x}%;top:${ch.y}%;transform:translate(-50%,-50%)">${charBlock}</div>`;
+  });
+
+  out += `</div>`; // close plot
+  out += `</div>`; // close chart
+
+  return out;
+}
+
+/* ============================================================
+   EXPORT — SVG
+   ============================================================ */
+async function buildSVG(opts = {}) {
+  const c = state.colors;
+  const W = 1000, H = 750;
+  const PLOT_T = 110, PLOT_R = 100, PLOT_B = 60, PLOT_L = 100;
+  const plotL = PLOT_L, plotT = PLOT_T;
+  const plotW = W - PLOT_L - PLOT_R;
+  const plotH = H - PLOT_T - PLOT_B;
+  const cxAxis = plotL + plotW / 2;
+  const cyAxis = plotT + plotH / 2;
+  const embed = opts.embedImages !== false;
+
+  // Pre-fetch images as data URIs if requested
+  const avatarMap = new Map();
+  if (embed) {
+    await Promise.all(state.characters.map(async ch => {
+      if (ch.avatar) {
+        const data = await imageUrlToDataUri(ch.avatar);
+        if (data) avatarMap.set(ch.avatar, data);
+      }
+    }));
+  }
+
+  const esc = escapeHtml;
+  let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="-apple-system,BlinkMacSystemFont,'PingFang TC','Microsoft JhengHei','Noto Sans TC',sans-serif">
+  <defs>
+    <clipPath id="chart-clip"><rect x="0" y="0" width="${W}" height="${H}" rx="14" ry="14"/></clipPath>`;
+
+  // per-avatar clip paths
+  state.characters.forEach((ch, i) => {
+    if (ch.avatar) {
+      const sz = ch.size || 56;
+      const cx = plotL + (ch.x / 100) * plotW;
+      const cy = plotT + (ch.y / 100) * plotH;
+      svg += `<clipPath id="ava-clip-${i}"><circle cx="${cx}" cy="${cy - sz/2 - 8}" r="${sz/2}"/></clipPath>`;
+    }
+  });
+  svg += `</defs>\n`;
+
+  // group with clip
+  svg += `  <g clip-path="url(#chart-clip)">\n`;
+  // background
+  svg += `    <rect x="0" y="0" width="${W}" height="${H}" fill="${c.background}"/>\n`;
+  // 4 quadrants
+  svg += `    <rect x="0" y="0" width="${W/2}" height="${H/2}" fill="${c.quadTL}"/>\n`;
+  svg += `    <rect x="${W/2}" y="0" width="${W/2}" height="${H/2}" fill="${c.quadTR}"/>\n`;
+  svg += `    <rect x="0" y="${H/2}" width="${W/2}" height="${H/2}" fill="${c.quadBL}"/>\n`;
+  svg += `    <rect x="${W/2}" y="${H/2}" width="${W/2}" height="${H/2}" fill="${c.quadBR}"/>\n`;
+  svg += `  </g>\n`;
+
+  // border
+  svg += `  <rect x=".5" y=".5" width="${W-1}" height="${H-1}" rx="14" ry="14" fill="none" stroke="rgba(45,30,10,.06)"/>\n`;
+
+  // title
+  svg += `  <text x="${W/2}" y="60" text-anchor="middle" fill="${c.text}" font-size="28" font-weight="500" font-family="Georgia, 'Noto Serif TC', serif" letter-spacing="-0.2">${esc(state.title)}</text>\n`;
+
+  // axis lines
+  svg += `  <line x1="${plotL}" y1="${cyAxis}" x2="${W - PLOT_R}" y2="${cyAxis}" stroke="${c.axis}" stroke-width="1"/>\n`;
+  svg += `  <line x1="${cxAxis}" y1="${plotT}" x2="${cxAxis}" y2="${H - PLOT_B}" stroke="${c.axis}" stroke-width="1"/>\n`;
+
+  // axis labels (rect + text, centered on the position)
+  function svgLabel(text, cx, cy, fontSize = 12, padX = 12, padY = 6) {
+    const t = esc(text);
+    const wapprox = approxTextWidth(text, fontSize) + padX * 2;
+    const h = fontSize + padY * 2;
+    return `<g transform="translate(${cx},${cy})">
+      <rect x="${-wapprox/2}" y="${-h/2}" width="${wapprox}" height="${h}" rx="8" ry="8" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="1"/>
+      <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${c.text}" font-size="${fontSize}" font-weight="500">${t}</text>
+    </g>`;
+  }
+  // x-left label: centered to the left of plot, with 14px gap
+  const xLeftW = approxTextWidth(state.axes.xLeft, 12) + 24;
+  svg += '  ' + svgLabel(state.axes.xLeft,  plotL - 14 - xLeftW/2, cyAxis) + '\n';
+  const xRightW = approxTextWidth(state.axes.xRight, 12) + 24;
+  svg += '  ' + svgLabel(state.axes.xRight, (W - PLOT_R) + 14 + xRightW/2, cyAxis) + '\n';
+  const yTopH = 12 + 12;
+  svg += '  ' + svgLabel(state.axes.yTop,   cxAxis, plotT - 10 - yTopH/2) + '\n';
+  svg += '  ' + svgLabel(state.axes.yBot,   cxAxis, (H - PLOT_B) + 10 + yTopH/2) + '\n';
+
+  // quadrant labels
+  for (const q of state.quadrants) {
+    const px = plotL + (q.x / 100) * plotW;
+    const py = plotT + (q.y / 100) * plotH;
+    const t = esc(q.name);
+    const fs = 16;
+    const wapprox = approxTextWidth(q.name, fs) + 28;
+    const h = fs + 14;
+    svg += `  <g transform="translate(${px},${py})">
+    <rect x="${-wapprox/2}" y="${-h/2}" width="${wapprox}" height="${h}" rx="8" ry="8" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="1"/>
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${c.text}" font-size="${fs}" font-weight="500" font-family="Georgia, 'Noto Serif TC', serif">${t}</text>
+  </g>\n`;
+  }
+
+  // characters
+  state.characters.forEach((ch, i) => {
+    const sz = ch.size || 56;
+    const cx = plotL + (ch.x / 100) * plotW;
+    const cy = plotT + (ch.y / 100) * plotH;
+    const ay = cy - sz/2 - 8;
+    const initial = esc(initialOf(ch.name));
+
+    if (ch.avatar) {
+      const src = avatarMap.get(ch.avatar) || ch.avatar;
+      svg += `  <image href="${esc(src)}" x="${cx - sz/2}" y="${ay - sz/2}" width="${sz}" height="${sz}" clip-path="url(#ava-clip-${i})" preserveAspectRatio="xMidYMid slice"/>\n`;
+      svg += `  <circle cx="${cx}" cy="${ay}" r="${sz/2}" fill="none" stroke="${c.axis}" stroke-width="2"/>\n`;
+    } else {
+      svg += `  <circle cx="${cx}" cy="${ay}" r="${sz/2}" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="2"/>\n`;
+      svg += `  <text x="${cx}" y="${ay}" text-anchor="middle" dominant-baseline="central" fill="${c.text}" font-size="${Math.round(sz * 0.4)}" font-weight="600" font-family="Georgia, serif">${initial}</text>\n`;
+    }
+
+    // name pill
+    const fs = 12;
+    const wapprox = approxTextWidth(ch.name || '·', fs) + 16;
+    const h = fs + 8;
+    const ny = cy + sz/2 + 4 + h/2;
+    svg += `  <g transform="translate(${cx},${ny})">
+    <rect x="${-wapprox/2}" y="${-h/2}" width="${wapprox}" height="${h}" rx="${h/2}" ry="${h/2}" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="1"/>
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${c.text}" font-size="${fs}" font-weight="500">${esc(ch.name || '·')}</text>
+  </g>\n`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function approxTextWidth(text, fontSize) {
+  // rough estimate: CJK = full-width, ASCII = ~0.55
+  let w = 0;
+  for (const c of String(text)) {
+    if (/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(c)) w += fontSize;
+    else w += fontSize * 0.55;
+  }
+  return w;
+}
+
+async function imageUrlToDataUri(url) {
+  if (!url) return null;
+  if (url.startsWith('data:')) return url;
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ============================================================
+   EXPORT — Raster (PNG / JPG)
+   ============================================================ */
+async function buildRaster(format = 'png', scale = 2) {
+  const svgText = await buildSVG({ embedImages: true });
+  const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const W = 1000, H = 750;
+
+  return await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext('2d');
+      if (format === 'jpg' || format === 'jpeg') {
+        ctx.fillStyle = state.colors.background;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const mime = format === 'jpg' || format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      canvas.toBlob(b => resolve({ blob: b, dataUrl: canvas.toDataURL(mime, .92) }), mime, .92);
+    };
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(new Error('SVG → Image 失敗。外部圖片可能受 CORS 限制；建議將圖片放到同一個 GitHub repo 內。'));
+    };
+    img.src = url;
+  });
+}
+
+/* ============================================================
+   EXPORT DIALOG
+   ============================================================ */
+const dlg = document.getElementById('export-dialog');
+const dlgBody = document.getElementById('dlg-body');
+const dlgActions = document.getElementById('dlg-actions');
+
+function openExportDialog(tab = 'html') {
+  dlg.showModal();
+  document.querySelectorAll('.dlg-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderDlgTab(tab);
+}
+
+async function renderDlgTab(tab) {
+  dlgBody.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--ink-mute)">產生中…</div>`;
+  dlgActions.innerHTML = '';
+
+  if (tab === 'html') {
+    const code = buildPureHTML();
+    dlgBody.innerHTML = `
+      <div class="dlg-note">
+        Caveduck / AIRP 相容片段。直接貼到平台的 HTML 預覽欄位即可（<b>不要</b>包 markdown code block）。<br>
+        外部圖片建議改放同 repo 內路徑（如 <code>images/a.png</code>），避免行動裝置或預覽欄位的 CORS 問題。
+      </div>
+      <pre id="dlg-pre"></pre>
+    `;
+    document.getElementById('dlg-pre').textContent = code;
+    dlgActions.innerHTML = `
+      <button class="btn ghost" id="btn-copy">複製</button>
+      <button class="btn primary" id="btn-dl">下載 .html</button>
+    `;
+    document.getElementById('btn-copy').onclick = () => copyToClipboard(code);
+    document.getElementById('btn-dl').onclick = () => downloadBlob(
+      new Blob([code], { type: 'text/html' }),
+      slugify(state.title) + '.html'
+    );
+  }
+
+  else if (tab === 'svg') {
+    try {
+      const svg = await buildSVG({ embedImages: true });
+      dlgBody.innerHTML = `
+        <div class="dlg-note">向量格式 SVG。可在任何瀏覽器或向量繪圖軟體中開啟。</div>
+        <div class="img-preview"><img alt="SVG preview" src="data:image/svg+xml;utf8,${encodeURIComponent(svg)}"></div>
+        <pre style="margin-top:12px;font-size:11px;max-height:200px" id="dlg-pre"></pre>
+      `;
+      document.getElementById('dlg-pre').textContent = svg.length > 4000 ? svg.slice(0, 4000) + '\n\n…（省略，下載完整檔以取得全部內容）' : svg;
+      dlgActions.innerHTML = `
+        <button class="btn ghost" id="btn-copy">複製</button>
+        <button class="btn primary" id="btn-dl">下載 .svg</button>
+      `;
+      document.getElementById('btn-copy').onclick = () => copyToClipboard(svg);
+      document.getElementById('btn-dl').onclick = () => downloadBlob(
+        new Blob([svg], { type: 'image/svg+xml' }),
+        slugify(state.title) + '.svg'
+      );
+    } catch (e) {
+      dlgBody.innerHTML = `<div class="dlg-note" style="border-color:var(--accent)">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  else if (tab === 'png' || tab === 'jpg') {
+    try {
+      const { blob, dataUrl } = await buildRaster(tab, 2);
+      dlgBody.innerHTML = `
+        <div class="dlg-note">
+          ${tab.toUpperCase()} · 2× 解析度 (2000×1500)。<br>
+          <b>注意：</b>外部圖片若被 CORS 擋住，可能無法成功匯出；遇到失敗請改用本地 <code>images/...</code> 路徑。
+        </div>
+        <div class="img-preview"><img alt="${tab.toUpperCase()} preview" src="${dataUrl}"></div>
+      `;
+      dlgActions.innerHTML = `
+        <button class="btn primary" id="btn-dl">下載 .${tab}</button>
+      `;
+      document.getElementById('btn-dl').onclick = () => downloadBlob(
+        blob,
+        slugify(state.title) + '.' + tab
+      );
+    } catch (e) {
+      dlgBody.innerHTML = `<div class="dlg-note" style="border-color:var(--accent)">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  else if (tab === 'json') {
+    const json = JSON.stringify(state, null, 2);
+    dlgBody.innerHTML = `
+      <div class="dlg-note">設定檔。下載後可日後重新載入恢復編輯狀態。</div>
+      <pre id="dlg-pre"></pre>
+    `;
+    document.getElementById('dlg-pre').textContent = json;
+    dlgActions.innerHTML = `
+      <button class="btn ghost" id="btn-copy">複製</button>
+      <button class="btn primary" id="btn-dl">下載 .json</button>
+    `;
+    document.getElementById('btn-copy').onclick = () => copyToClipboard(json);
+    document.getElementById('btn-dl').onclick = () => downloadBlob(
+      new Blob([json], { type: 'application/json' }),
+      slugify(state.title) + '.json'
+    );
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(
+    () => showToast('已複製到剪貼簿'),
+    () => showToast('複製失敗')
+  );
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('已下載 ' + filename);
+}
+function slugify(s) {
+  return String(s || 'quadrant')
+    .replace(/[^\p{L}\p{N}_-]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'quadrant';
+}
+
+/* tab switching */
+document.querySelectorAll('.dlg-tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.dlg-tab').forEach(t => t.classList.remove('active'));
+    b.classList.add('active');
+    renderDlgTab(b.dataset.tab);
+  });
+});
+document.getElementById('btn-dlg-close').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => {
+  const r = dlg.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
+});
+
+/* ============================================================
+   TOP BAR ACTIONS
+   ============================================================ */
+document.getElementById('btn-export').addEventListener('click', () => openExportDialog('html'));
+document.getElementById('btn-save-json').addEventListener('click', () => {
+  const json = JSON.stringify(state, null, 2);
+  downloadBlob(new Blob([json], { type: 'application/json' }), slugify(state.title) + '.json');
+});
+document.getElementById('btn-load-json').addEventListener('click', () => {
+  document.getElementById('file-load-json').click();
+});
+document.getElementById('file-load-json').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    state = mergeDefaults(data);
+    editingCharIndex = null;
+    refreshAll();
+    saveLocal();
+    showToast('已載入 JSON');
+  } catch (err) {
+    showToast('JSON 格式錯誤');
+  }
+  e.target.value = '';
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!confirm('要重置為預設嗎？目前的編輯會被清除。')) return;
+  state = clone(DEFAULT_STATE);
+  editingCharIndex = null;
+  refreshAll();
+  saveLocal();
+  showToast('已重置');
+});
+
+/* ============================================================
+   ZOOM CONTROLS
+   ============================================================ */
+document.getElementById('btn-zoom-fit').addEventListener('click', fitZoom);
+document.getElementById('btn-zoom-100').addEventListener('click', () => setZoom(1));
+window.addEventListener('resize', () => fitZoom());
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+function refreshAll() {
+  fillBasic();
+  buildQuadrantFields();
+  buildColorFields();
+  fillColors();
+  buildCharList();
+  renderChart();
+  fitZoom();
+}
+
+function init() {
+  loadLocal();
+  bindBasic();
+  bindCharCount();
+  bindAddChar();
+  refreshAll();
+}
+
+init();
+</script>
+</body>
+</html>
