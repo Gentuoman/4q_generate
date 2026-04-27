@@ -237,7 +237,20 @@
   }
   input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; background: var(--accent); }
 
-  /* color picker */
+  /* color picker & layout */
+  .input-with-color {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .input-with-color input[type="text"] { flex: 1; }
+  .input-with-color input[type="color"] {
+    appearance: none; -webkit-appearance: none;
+    width: 32px; height: 32px; flex-shrink: 0;
+    padding: 0; border: 1px solid var(--line-soft); border-radius: 4px;
+    background: transparent; cursor: pointer;
+  }
+  .input-with-color input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+  .input-with-color input[type="color"]::-moz-color-swatch { border: none; border-radius: 3px; }
+
   .color-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -385,12 +398,13 @@
     overflow: hidden;
   }
   .chart .chart-bg { position: absolute; inset: 0; z-index: 1; }
+  
   .chart .chart-title-area {
     position: absolute;
-    top: 24px; left: 50%; transform: translateX(-50%);
     z-index: 5;
     text-align: center;
     pointer-events: none;
+    transform: translate(-50%, -50%);
   }
   .chart .chart-title {
     font-family: var(--font-display);
@@ -401,9 +415,9 @@
     margin: 0;
     font-variation-settings: "opsz" 56, "SOFT" 30;
   }
+
   .chart .chart-plot {
     position: absolute;
-    /* 修正：將原本的 inset: 110px 100px 60px 100px 修正為上下對稱的 85px */
     inset: 85px 100px 85px 100px;
     z-index: 2;
   }
@@ -441,12 +455,8 @@
     letter-spacing: .04em;
     white-space: nowrap;
     pointer-events: none;
+    transform: translate(-50%, -50%);
   }
-  .chart .axis-label.x-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 14px; }
-  .chart .axis-label.x-right { left: 100%;  top: 50%; transform: translateY(-50%); margin-left: 14px; }
-  .chart .axis-label.y-top   { left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 10px; }
-  .chart .axis-label.y-bot   { left: 50%; top: 100%;    transform: translateX(-50%); margin-top: 10px; }
-
   .chart .quadrant-label {
     position: absolute;
     z-index: 4;
@@ -624,13 +634,13 @@
       grid-template-rows: minmax(300px, 45vh) 1fr; 
     }
     aside.editor { 
-      display: block; /* 移除原本的 display: none */
+      display: block; 
       border-right: none;
       border-bottom: 1px solid var(--line-soft);
       padding-bottom: 20px;
     }
     header .brand h1 { font-size: 18px; }
-    header .brand .sub { display: none; } /* 空間不足時隱藏副標題 */
+    header .brand .sub { display: none; } 
     header .actions .btn { padding: 6px 10px; font-size: 12px; }
   }
 </style>
@@ -656,42 +666,50 @@
 <main>
   <aside class="editor" id="editor">
     <details class="panel" open>
-      <summary><h2>基本設定</h2></summary>
+      <summary><h2>主標題設定</h2></summary>
       <div class="panel-body">
         <div class="field">
-          <label>主標題</label>
-          <input type="text" id="f-title" maxlength="80">
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>X 軸 · 左</label>
-            <input type="text" id="f-x-left" maxlength="20">
-          </div>
-          <div class="field">
-            <label>X 軸 · 右</label>
-            <input type="text" id="f-x-right" maxlength="20">
+          <label>標題文字與顏色</label>
+          <div class="input-with-color">
+            <input type="text" id="f-title-text" maxlength="80">
+            <input type="color" id="f-title-color" title="文字顏色">
           </div>
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Y 軸 · 上</label>
-            <input type="text" id="f-y-top" maxlength="20">
+            <label>位置 X · <span id="lbl-title-x">50</span>%</label>
+            <div class="slider-row">
+              <input type="range" id="f-title-x" min="0" max="100" step="1">
+              <span class="v"></span>
+            </div>
           </div>
           <div class="field">
-            <label>Y 軸 · 下</label>
-            <input type="text" id="f-y-bot" maxlength="20">
+            <label>位置 Y · <span id="lbl-title-y">4</span>%</label>
+            <div class="slider-row">
+              <input type="range" id="f-title-y" min="0" max="100" step="1">
+              <span class="v"></span>
+            </div>
           </div>
         </div>
       </div>
     </details>
 
     <details class="panel" open>
-      <summary><h2>象限名稱</h2></summary>
-      <div class="panel-body" id="quad-fields"></div>
+      <summary><h2>軸線標籤</h2></summary>
+      <div class="panel-body" id="axes-fields">
+        <!-- JS dynamically fills this -->
+      </div>
     </details>
 
     <details class="panel">
-      <summary><h2>配色</h2></summary>
+      <summary><h2>象限名稱</h2></summary>
+      <div class="panel-body" id="quad-fields">
+        <!-- JS dynamically fills this -->
+      </div>
+    </details>
+
+    <details class="panel">
+      <summary><h2>整體配色</h2></summary>
       <div class="panel-body">
         <div class="color-grid" id="color-grid"></div>
       </div>
@@ -760,18 +778,18 @@
 const STORAGE_KEY = 'quadrant-editor-state-v1';
 
 const DEFAULT_STATE = {
-  title: '四象限分析',
+  title: { text: '四象限分析', x: 50, y: 5, color: '#2b1d0e' },
   axes: {
-    xLeft: '好應付',
-    xRight: '好麻煩',
-    yTop: '坦率',
-    yBot: '不坦率'
+    xLeft:  { text: '好應付', x: -6, y: 50, color: '#2b1d0e' },
+    xRight: { text: '好麻煩', x: 106, y: 50, color: '#2b1d0e' },
+    yTop:   { text: '坦率', x: 50, y: -6, color: '#2b1d0e' },
+    yBot:   { text: '不坦率', x: 50, y: 106, color: '#2b1d0e' }
   },
   quadrants: [
-    { id: 'tl', name: '坦率 × 好應付',  x: 18, y: 22 },
-    { id: 'tr', name: '坦率 × 好麻煩',  x: 82, y: 22 },
-    { id: 'bl', name: '不坦率 × 好應付', x: 18, y: 78 },
-    { id: 'br', name: '不坦率 × 好麻煩', x: 82, y: 78 }
+    { id: 'tl', name: '坦率 × 好應付',  x: 18, y: 22, color: '#2b1d0e' },
+    { id: 'tr', name: '坦率 × 好麻煩',  x: 82, y: 22, color: '#2b1d0e' },
+    { id: 'bl', name: '不坦率 × 好應付', x: 18, y: 78, color: '#2b1d0e' },
+    { id: 'br', name: '不坦率 × 好麻煩', x: 82, y: 78, color: '#2b1d0e' }
   ],
   colors: {
     background:  '#f4ead2',
@@ -796,7 +814,7 @@ let editingCharIndex = null;
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
 /* ============================================================
-   PERSISTENCE
+   PERSISTENCE & MIGRATION
    ============================================================ */
 function saveLocal() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -806,18 +824,43 @@ function loadLocal() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const loaded = JSON.parse(raw);
-    if (!loaded || !loaded.title) return false;
+    if (!loaded) return false;
     state = mergeDefaults(loaded);
     return true;
   } catch (e) { return false; }
 }
 function mergeDefaults(loaded) {
   const merged = clone(DEFAULT_STATE);
-  if (loaded.title) merged.title = loaded.title;
-  if (loaded.axes) Object.assign(merged.axes, loaded.axes);
-  if (Array.isArray(loaded.quadrants) && loaded.quadrants.length === 4) merged.quadrants = loaded.quadrants;
+  
+  // 處理舊版 Title (純字串) 轉 新版物件
+  if (typeof loaded.title === 'string') {
+    merged.title.text = loaded.title;
+  } else if (loaded.title) {
+    Object.assign(merged.title, loaded.title);
+  }
+
+  // 處理舊版 Axes (純字串) 轉 新版物件
+  if (loaded.axes) {
+    for (const k in merged.axes) {
+      if (typeof loaded.axes[k] === 'string') {
+        merged.axes[k].text = loaded.axes[k];
+      } else if (loaded.axes[k]) {
+        Object.assign(merged.axes[k], loaded.axes[k]);
+      }
+    }
+  }
+
+  // 合併象限與其新增的顏色設定
+  if (Array.isArray(loaded.quadrants) && loaded.quadrants.length === 4) {
+    loaded.quadrants.forEach((q, i) => {
+      merged.quadrants[i] = { ...merged.quadrants[i], ...q };
+      if (!q.color) merged.quadrants[i].color = merged.colors.text; // 相容無顏色的舊版
+    });
+  }
+
   if (loaded.colors) Object.assign(merged.colors, loaded.colors);
   if (Array.isArray(loaded.characters)) merged.characters = loaded.characters;
+  
   return merged;
 }
 
@@ -869,23 +912,30 @@ function renderChart() {
   html += `<div class="quadrant-bg tr" style="background:${c.quadTR};"></div>`;
   html += `<div class="quadrant-bg bl" style="background:${c.quadBL};"></div>`;
   html += `<div class="quadrant-bg br" style="background:${c.quadBR};"></div>`;
-  // title
-  html += `<div class="chart-title-area"><h2 class="chart-title" style="color:${c.text};">${escapeHtml(state.title)}</h2></div>`;
+  
+  // title (Absolute within .chart)
+  html += `<div class="chart-title-area" style="left:${state.title.x}%; top:${state.title.y}%;">
+             <h2 class="chart-title" style="color:${state.title.color};">${escapeHtml(state.title.text)}</h2>
+           </div>`;
 
   // plot area
   html += `<div class="chart-plot" style="color:${c.axis};">`;
   // axes lines
   html += `<div class="axis-x"></div><div class="axis-y"></div>`;
-  // axis labels
-  const lblStyle = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};`;
-  html += `<div class="axis-label x-left"  style="${lblStyle}">${escapeHtml(state.axes.xLeft)}</div>`;
-  html += `<div class="axis-label x-right" style="${lblStyle}">${escapeHtml(state.axes.xRight)}</div>`;
-  html += `<div class="axis-label y-top"   style="${lblStyle}">${escapeHtml(state.axes.yTop)}</div>`;
-  html += `<div class="axis-label y-bot"   style="${lblStyle}">${escapeHtml(state.axes.yBot)}</div>`;
+  
+  // axis labels (Absolute within .chart-plot)
+  const renderAxisLabel = (ax) => {
+    const lblStyle = `left:${ax.x}%; top:${ax.y}%; background:${c.labelBg}; color:${ax.color}; border:1px solid ${c.axis};`;
+    return `<div class="axis-label" style="${lblStyle}">${escapeHtml(ax.text)}</div>`;
+  };
+  html += renderAxisLabel(state.axes.xLeft);
+  html += renderAxisLabel(state.axes.xRight);
+  html += renderAxisLabel(state.axes.yTop);
+  html += renderAxisLabel(state.axes.yBot);
 
   // quadrant labels
   for (const q of state.quadrants) {
-    html += `<div class="quadrant-label" style="left:${q.x}%;top:${q.y}%;background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};">${escapeHtml(q.name)}</div>`;
+    html += `<div class="quadrant-label" style="left:${q.x}%;top:${q.y}%;background:${c.labelBg};color:${q.color};border:1px solid ${c.axis};">${escapeHtml(q.name)}</div>`;
   }
 
   // characters
@@ -950,56 +1000,126 @@ function attachCharacterDrag() {
 }
 
 /* ============================================================
-   SIDEBAR BINDINGS
+   SIDEBAR BINDINGS (TITLE, AXES, QUADRANTS)
    ============================================================ */
-function bindBasic() {
-  const fields = [
-    ['f-title',    v => state.title = v],
-    ['f-x-left',   v => state.axes.xLeft = v],
-    ['f-x-right',  v => state.axes.xRight = v],
-    ['f-y-top',    v => state.axes.yTop = v],
-    ['f-y-bot',    v => state.axes.yBot = v],
-  ];
-  for (const [id, setter] of fields) {
-    const el = document.getElementById(id);
-    el.addEventListener('input', () => {
-      setter(el.value);
-      renderChart();
-      scheduleSave();
-    });
-  }
+
+function buildTitleFields() {
+  const tText = document.getElementById('f-title-text');
+  const tColor = document.getElementById('f-title-color');
+  const tX = document.getElementById('f-title-x');
+  const tY = document.getElementById('f-title-y');
+
+  tText.value = state.title.text;
+  tColor.value = state.title.color;
+  tX.value = state.title.x;
+  tY.value = state.title.y;
+  
+  tX.nextElementSibling.textContent = state.title.x;
+  tY.nextElementSibling.textContent = state.title.y;
+  document.getElementById('lbl-title-x').textContent = state.title.x;
+  document.getElementById('lbl-title-y').textContent = state.title.y;
+
+  tText.addEventListener('input', e => { state.title.text = e.target.value; renderChart(); scheduleSave(); });
+  tColor.addEventListener('input', e => { state.title.color = e.target.value; renderChart(); scheduleSave(); });
+  
+  tX.addEventListener('input', e => {
+    state.title.x = +e.target.value;
+    tX.nextElementSibling.textContent = state.title.x;
+    document.getElementById('lbl-title-x').textContent = state.title.x;
+    renderChart(); scheduleSave();
+  });
+  tY.addEventListener('input', e => {
+    state.title.y = +e.target.value;
+    tY.nextElementSibling.textContent = state.title.y;
+    document.getElementById('lbl-title-y').textContent = state.title.y;
+    renderChart(); scheduleSave();
+  });
 }
 
-function fillBasic() {
-  document.getElementById('f-title').value   = state.title;
-  document.getElementById('f-x-left').value  = state.axes.xLeft;
-  document.getElementById('f-x-right').value = state.axes.xRight;
-  document.getElementById('f-y-top').value   = state.axes.yTop;
-  document.getElementById('f-y-bot').value   = state.axes.yBot;
+function buildAxesFields() {
+  const wrap = document.getElementById('axes-fields');
+  wrap.innerHTML = '';
+  const labels = { xLeft: 'X 軸 · 左', xRight: 'X 軸 · 右', yTop: 'Y 軸 · 上', yBot: 'Y 軸 · 下' };
+  
+  Object.keys(labels).forEach(k => {
+    const ax = state.axes[k];
+    const block = document.createElement('div');
+    block.style.cssText = 'margin-bottom:20px;';
+    block.innerHTML = `
+      <div class="field">
+        <label>${labels[k]}</label>
+        <div class="input-with-color">
+          <input type="text" id="f-ax-text-${k}" value="${escapeAttr(ax.text)}" maxlength="20">
+          <input type="color" id="f-ax-color-${k}" value="${ax.color}" title="文字顏色">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>位置 X · <span id="lbl-ax-x-${k}">${ax.x}</span>%</label>
+          <div class="slider-row">
+            <input type="range" id="f-ax-x-${k}" min="-20" max="120" step="1" value="${ax.x}">
+            <span class="v">${ax.x}</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>位置 Y · <span id="lbl-ax-y-${k}">${ax.y}</span>%</label>
+          <div class="slider-row">
+            <input type="range" id="f-ax-y-${k}" min="-20" max="120" step="1" value="${ax.y}">
+            <span class="v">${ax.y}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(block);
+
+    document.getElementById(`f-ax-text-${k}`).addEventListener('input', e => { state.axes[k].text = e.target.value; renderChart(); scheduleSave(); });
+    document.getElementById(`f-ax-color-${k}`).addEventListener('input', e => { state.axes[k].color = e.target.value; renderChart(); scheduleSave(); });
+    
+    const xS = document.getElementById(`f-ax-x-${k}`);
+    const yS = document.getElementById(`f-ax-y-${k}`);
+    xS.addEventListener('input', e => {
+      const v = +e.target.value;
+      state.axes[k].x = v;
+      xS.nextElementSibling.textContent = v;
+      document.getElementById(`lbl-ax-x-${k}`).textContent = v;
+      renderChart(); scheduleSave();
+    });
+    yS.addEventListener('input', e => {
+      const v = +e.target.value;
+      state.axes[k].y = v;
+      yS.nextElementSibling.textContent = v;
+      document.getElementById(`lbl-ax-y-${k}`).textContent = v;
+      renderChart(); scheduleSave();
+    });
+  });
 }
 
 function buildQuadrantFields() {
   const wrap = document.getElementById('quad-fields');
   wrap.innerHTML = '';
   const labels = { tl: '左上', tr: '右上', bl: '左下', br: '右下' };
+  
   state.quadrants.forEach((q, i) => {
     const block = document.createElement('div');
-    block.style.cssText = 'margin-bottom:14px;';
+    block.style.cssText = 'margin-bottom:20px;';
     block.innerHTML = `
       <div class="field">
         <label>${labels[q.id]} 名稱</label>
-        <input type="text" id="f-quad-name-${i}" value="${escapeAttr(q.name)}" maxlength="40">
+        <div class="input-with-color">
+          <input type="text" id="f-quad-name-${i}" value="${escapeAttr(q.name)}" maxlength="40">
+          <input type="color" id="f-quad-color-${i}" value="${q.color}" title="文字顏色">
+        </div>
       </div>
       <div class="field-row">
         <div class="field">
-          <label>位置 X · ${q.x}%</label>
+          <label>位置 X · <span id="lbl-quad-x-${i}">${q.x}</span>%</label>
           <div class="slider-row">
             <input type="range" id="f-quad-x-${i}" min="0" max="100" step="1" value="${q.x}">
             <span class="v">${q.x}</span>
           </div>
         </div>
         <div class="field">
-          <label>位置 Y · ${q.y}%</label>
+          <label>位置 Y · <span id="lbl-quad-y-${i}">${q.y}</span>%</label>
           <div class="slider-row">
             <input type="range" id="f-quad-y-${i}" min="0" max="100" step="1" value="${q.y}">
             <span class="v">${q.y}</span>
@@ -1009,24 +1129,23 @@ function buildQuadrantFields() {
     `;
     wrap.appendChild(block);
 
-    document.getElementById(`f-quad-name-${i}`).addEventListener('input', e => {
-      state.quadrants[i].name = e.target.value;
-      renderChart(); scheduleSave();
-    });
+    document.getElementById(`f-quad-name-${i}`).addEventListener('input', e => { state.quadrants[i].name = e.target.value; renderChart(); scheduleSave(); });
+    document.getElementById(`f-quad-color-${i}`).addEventListener('input', e => { state.quadrants[i].color = e.target.value; renderChart(); scheduleSave(); });
+    
     const xS = document.getElementById(`f-quad-x-${i}`);
     const yS = document.getElementById(`f-quad-y-${i}`);
     xS.addEventListener('input', e => {
       const v = +e.target.value;
       state.quadrants[i].x = v;
       xS.nextElementSibling.textContent = v;
-      xS.parentElement.previousElementSibling.textContent = `位置 X · ${v}%`;
+      document.getElementById(`lbl-quad-x-${i}`).textContent = v;
       renderChart(); scheduleSave();
     });
     yS.addEventListener('input', e => {
       const v = +e.target.value;
       state.quadrants[i].y = v;
       yS.nextElementSibling.textContent = v;
-      yS.parentElement.previousElementSibling.textContent = `位置 Y · ${v}%`;
+      document.getElementById(`lbl-quad-y-${i}`).textContent = v;
       renderChart(); scheduleSave();
     });
   });
@@ -1063,7 +1182,7 @@ function buildColorFields() {
 
 function fillColors() {
   for (const [k] of COLOR_KEYS) {
-    const el = document.getElementById('c-' + k); // 這個地方已補上遺漏的 '+'
+    const el = document.getElementById('c-' + k);
     if (el) el.value = state.colors[k];
   }
 }
@@ -1268,21 +1387,14 @@ function fitZoom() {
 
 /* ============================================================
    EXPORT — PURE HTML (Caveduck-strict)
-   ============================================================
-   Allowed tags: div, span, p, hr, b, i, img, br, a
-   Forbidden: <style>, <script>, id, class, data-*
-   Inline-style only.
-   font-size/padding/margin/text-shadow → rem
-   width/height/positions → px or %
    ============================================================ */
 function buildPureHTML() {
   const c = state.colors;
   const W = 1000, H = 750;
-  // 修正：原本是 110/60 導致跑位，改為對稱的 85/85
   const PLOT_T = 85, PLOT_R = 100, PLOT_B = 85, PLOT_L = 100;
 
-  const labelBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:8px;padding:.25rem .75rem;font-size:.75rem;font-weight:500;letter-spacing:.04em;white-space:nowrap`;
-  const quadLabelBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:8px;padding:.375rem .875rem;font-size:1rem;font-weight:500;white-space:nowrap;font-family:Georgia,'Noto Serif TC',serif`;
+  const getLabelBox = (color) => `position:absolute;transform:translate(-50%,-50%);background:${c.labelBg};color:${color};border:1px solid ${c.axis};border-radius:8px;padding:.25rem .75rem;font-size:.75rem;font-weight:500;letter-spacing:.04em;white-space:nowrap;z-index:4;`;
+  const getQuadLabelBox = (color) => `position:absolute;transform:translate(-50%,-50%);background:${c.labelBg};color:${color};border:1px solid ${c.axis};border-radius:8px;padding:.375rem .875rem;font-size:1rem;font-weight:500;white-space:nowrap;font-family:Georgia,'Noto Serif TC',serif;z-index:4;`;
   const charNameBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:999px;padding:.125rem .5rem;font-size:.75rem;font-weight:500;white-space:nowrap;margin-top:.25rem`;
 
   let out = '';
@@ -1296,27 +1408,28 @@ function buildPureHTML() {
   out += `<div style="position:absolute;bottom:0;left:0;width:50%;height:50%;background:${c.quadBL}"></div>`;
   out += `<div style="position:absolute;bottom:0;right:0;width:50%;height:50%;background:${c.quadBR}"></div>`;
 
-  // title
-  out += `<div style="position:absolute;top:24px;left:0;right:0;text-align:center;pointer-events:none">`;
-  out += `<span style="display:inline-block;font-size:1.75rem;font-weight:500;color:${c.text};font-family:Georgia,'Noto Serif TC',serif;letter-spacing:-.005em">${escapeHtml(state.title)}</span>`;
+  // title (Absolute within .chart)
+  out += `<div style="position:absolute;left:${state.title.x}%;top:${state.title.y}%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:5;">`;
+  out += `<span style="display:inline-block;font-size:1.75rem;font-weight:500;color:${state.title.color};font-family:Georgia,'Noto Serif TC',serif;letter-spacing:-.005em">${escapeHtml(state.title.text)}</span>`;
   out += `</div>`;
 
   // plot area
   out += `<div style="position:absolute;top:${PLOT_T}px;right:${PLOT_R}px;bottom:${PLOT_B}px;left:${PLOT_L}px">`;
 
-  // axes
+  // axes lines
   out += `<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:${c.axis};transform:translateY(-50%)"></div>`;
   out += `<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:${c.axis};transform:translateX(-50%)"></div>`;
 
-  // axis labels (anchored outside the plot via right/left/top/bottom 100%)
-  out += `<div style="position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:.875rem;${labelBox}">${escapeHtml(state.axes.xLeft)}</div>`;
-  out += `<div style="position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:.875rem;${labelBox}">${escapeHtml(state.axes.xRight)}</div>`;
-  out += `<div style="position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:.625rem;${labelBox}">${escapeHtml(state.axes.yTop)}</div>`;
-  out += `<div style="position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:.625rem;${labelBox}">${escapeHtml(state.axes.yBot)}</div>`;
+  // axis labels
+  const renderAxHTML = (ax) => `<div style="${getLabelBox(ax.color)}left:${ax.x}%;top:${ax.y}%;">${escapeHtml(ax.text)}</div>`;
+  out += renderAxHTML(state.axes.xLeft);
+  out += renderAxHTML(state.axes.xRight);
+  out += renderAxHTML(state.axes.yTop);
+  out += renderAxHTML(state.axes.yBot);
 
   // quadrant labels
   for (const q of state.quadrants) {
-    out += `<div style="position:absolute;left:${q.x}%;top:${q.y}%;transform:translate(-50%,-50%);${quadLabelBox}">${escapeHtml(q.name)}</div>`;
+    out += `<div style="${getQuadLabelBox(q.color)}left:${q.x}%;top:${q.y}%;">${escapeHtml(q.name)}</div>`;
   }
 
   // characters
@@ -1335,7 +1448,7 @@ function buildPureHTML() {
       charBlock = `<a href="${escapeAttr(ch.link)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center">${inner}<div style="${charNameBox}">${escapeHtml(ch.name || '·')}</div></a>`;
     }
 
-    out += `<div style="position:absolute;left:${ch.x}%;top:${ch.y}%;transform:translate(-50%,-50%)">${charBlock}</div>`;
+    out += `<div style="position:absolute;left:${ch.x}%;top:${ch.y}%;transform:translate(-50%,-50%);z-index:6;">${charBlock}</div>`;
   });
 
   out += `</div>`; // close plot
@@ -1350,7 +1463,6 @@ function buildPureHTML() {
 async function buildSVG(opts = {}) {
   const c = state.colors;
   const W = 1000, H = 750;
-  // 修正：原本是 110/60 導致跑位，改為對稱的 85/85
   const PLOT_T = 85, PLOT_R = 100, PLOT_B = 85, PLOT_L = 100;
   const plotL = PLOT_L, plotT = PLOT_T;
   const plotW = W - PLOT_L - PLOT_R;
@@ -1402,50 +1514,52 @@ async function buildSVG(opts = {}) {
   svg += `  <rect x=".5" y=".5" width="${W-1}" height="${H-1}" rx="14" ry="14" fill="none" stroke="rgba(45,30,10,.06)"/>\n`;
 
   // title
-  svg += `  <text x="${W/2}" y="60" text-anchor="middle" fill="${c.text}" font-size="28" font-weight="500" font-family="Georgia, 'Noto Serif TC', serif" letter-spacing="-0.2">${esc(state.title)}</text>\n`;
+  const tX = W * (state.title.x / 100);
+  const tY = H * (state.title.y / 100);
+  svg += `  <text x="${tX}" y="${tY}" text-anchor="middle" dominant-baseline="middle" fill="${state.title.color}" font-size="28" font-weight="500" font-family="Georgia, 'Noto Serif TC', serif" letter-spacing="-0.2">${esc(state.title.text)}</text>\n`;
 
   // axis lines
   svg += `  <line x1="${plotL}" y1="${cyAxis}" x2="${W - PLOT_R}" y2="${cyAxis}" stroke="${c.axis}" stroke-width="1"/>\n`;
   svg += `  <line x1="${cxAxis}" y1="${plotT}" x2="${cxAxis}" y2="${H - PLOT_B}" stroke="${c.axis}" stroke-width="1"/>\n`;
 
-  // axis labels (rect + text, centered on the position)
-  function svgLabel(text, cx, cy, fontSize = 12, padX = 12, padY = 6) {
-    const t = esc(text);
-    const wapprox = approxTextWidth(text, fontSize) + padX * 2;
+  // axis labels
+  function svgLabel(ax, cx, cy, fontSize = 12, padX = 12, padY = 6) {
+    const t = esc(ax.text);
+    const wapprox = approxTextWidth(ax.text, fontSize) + padX * 2;
     const h = fontSize + padY * 2;
     return `<g transform="translate(${cx},${cy})">
       <rect x="${-wapprox/2}" y="${-h/2}" width="${wapprox}" height="${h}" rx="8" ry="8" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="1"/>
-      <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${c.text}" font-size="${fontSize}" font-weight="500">${t}</text>
+      <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${ax.color}" font-size="${fontSize}" font-weight="500">${t}</text>
     </g>`;
   }
-  // x-left label: centered to the left of plot, with 14px gap
-  const xLeftW = approxTextWidth(state.axes.xLeft, 12) + 24;
-  svg += '  ' + svgLabel(state.axes.xLeft,  plotL - 14 - xLeftW/2, cyAxis) + '\n';
-  const xRightW = approxTextWidth(state.axes.xRight, 12) + 24;
-  svg += '  ' + svgLabel(state.axes.xRight, (W - PLOT_R) + 14 + xRightW/2, cyAxis) + '\n';
-  const yTopH = 12 + 12;
-  svg += '  ' + svgLabel(state.axes.yTop,   cxAxis, plotT - 10 - yTopH/2) + '\n';
-  svg += '  ' + svgLabel(state.axes.yBot,   cxAxis, (H - PLOT_B) + 10 + yTopH/2) + '\n';
+  
+  const getCx = (x) => plotL + (x / 100) * plotW;
+  const getCy = (y) => plotT + (y / 100) * plotH;
+
+  svg += '  ' + svgLabel(state.axes.xLeft, getCx(state.axes.xLeft.x), getCy(state.axes.xLeft.y)) + '\n';
+  svg += '  ' + svgLabel(state.axes.xRight, getCx(state.axes.xRight.x), getCy(state.axes.xRight.y)) + '\n';
+  svg += '  ' + svgLabel(state.axes.yTop, getCx(state.axes.yTop.x), getCy(state.axes.yTop.y)) + '\n';
+  svg += '  ' + svgLabel(state.axes.yBot, getCx(state.axes.yBot.x), getCy(state.axes.yBot.y)) + '\n';
 
   // quadrant labels
   for (const q of state.quadrants) {
-    const px = plotL + (q.x / 100) * plotW;
-    const py = plotT + (q.y / 100) * plotH;
+    const px = getCx(q.x);
+    const py = getCy(q.y);
     const t = esc(q.name);
     const fs = 16;
     const wapprox = approxTextWidth(q.name, fs) + 28;
     const h = fs + 14;
     svg += `  <g transform="translate(${px},${py})">
     <rect x="${-wapprox/2}" y="${-h/2}" width="${wapprox}" height="${h}" rx="8" ry="8" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="1"/>
-    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${c.text}" font-size="${fs}" font-weight="500" font-family="Georgia, 'Noto Serif TC', serif">${t}</text>
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${q.color}" font-size="${fs}" font-weight="500" font-family="Georgia, 'Noto Serif TC', serif">${t}</text>
   </g>\n`;
   }
 
   // characters
   state.characters.forEach((ch, i) => {
     const sz = ch.size || 56;
-    const cx = plotL + (ch.x / 100) * plotW;
-    const cy = plotT + (ch.y / 100) * plotH;
+    const cx = getCx(ch.x);
+    const cy = getCy(ch.y);
     const ay = cy - sz/2 - 8;
     const initial = esc(initialOf(ch.name));
 
@@ -1567,7 +1681,7 @@ async function renderDlgTab(tab) {
     document.getElementById('btn-copy').onclick = () => copyToClipboard(code);
     document.getElementById('btn-dl').onclick = () => downloadBlob(
       new Blob([code], { type: 'text/html' }),
-      slugify(state.title) + '.html'
+      slugify(state.title.text) + '.html'
     );
   }
 
@@ -1587,7 +1701,7 @@ async function renderDlgTab(tab) {
       document.getElementById('btn-copy').onclick = () => copyToClipboard(svg);
       document.getElementById('btn-dl').onclick = () => downloadBlob(
         new Blob([svg], { type: 'image/svg+xml' }),
-        slugify(state.title) + '.svg'
+        slugify(state.title.text) + '.svg'
       );
     } catch (e) {
       dlgBody.innerHTML = `<div class="dlg-note" style="border-color:var(--accent)">${escapeHtml(e.message)}</div>`;
@@ -1609,7 +1723,7 @@ async function renderDlgTab(tab) {
       `;
       document.getElementById('btn-dl').onclick = () => downloadBlob(
         blob,
-        slugify(state.title) + '.' + tab
+        slugify(state.title.text) + '.' + tab
       );
     } catch (e) {
       dlgBody.innerHTML = `<div class="dlg-note" style="border-color:var(--accent)">${escapeHtml(e.message)}</div>`;
@@ -1630,7 +1744,7 @@ async function renderDlgTab(tab) {
     document.getElementById('btn-copy').onclick = () => copyToClipboard(json);
     document.getElementById('btn-dl').onclick = () => downloadBlob(
       new Blob([json], { type: 'application/json' }),
-      slugify(state.title) + '.json'
+      slugify(state.title.text) + '.json'
     );
   }
 }
@@ -1676,7 +1790,7 @@ dlg.addEventListener('click', e => {
 document.getElementById('btn-export').addEventListener('click', () => openExportDialog('html'));
 document.getElementById('btn-save-json').addEventListener('click', () => {
   const json = JSON.stringify(state, null, 2);
-  downloadBlob(new Blob([json], { type: 'application/json' }), slugify(state.title) + '.json');
+  downloadBlob(new Blob([json], { type: 'application/json' }), slugify(state.title.text) + '.json');
 });
 document.getElementById('btn-load-json').addEventListener('click', () => {
   document.getElementById('file-load-json').click();
@@ -1717,7 +1831,8 @@ window.addEventListener('resize', () => fitZoom());
    INITIALIZATION
    ============================================================ */
 function refreshAll() {
-  fillBasic();
+  buildTitleFields();
+  buildAxesFields();
   buildQuadrantFields();
   buildColorFields();
   fillColors();
@@ -1728,7 +1843,8 @@ function refreshAll() {
 
 function init() {
   loadLocal();
-  bindBasic();
+  buildTitleFields();
+  buildAxesFields();
   bindCharCount();
   bindAddChar();
   refreshAll();
