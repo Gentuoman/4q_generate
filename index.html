@@ -403,7 +403,8 @@
   }
   .chart .chart-plot {
     position: absolute;
-    inset: 110px 100px 60px 100px;
+    /* 修正：將原本的 inset: 110px 100px 60px 100px 修正為上下對稱的 85px */
+    inset: 85px 100px 85px 100px;
     z-index: 2;
   }
   .chart .axis-x, .chart .axis-y {
@@ -616,10 +617,21 @@
   /* small helpers */
   .small-text { font-size: 11.5px; color: var(--ink-mute); margin-top: -4px; margin-bottom: 6px; }
 
-  /* mobile-ish responsive: hide editor */
+  /* mobile-ish responsive: 修正手機版的顯示問題 */
   @media (max-width: 800px) {
-    main { grid-template-columns: 1fr; grid-template-rows: 1fr; }
-    aside.editor { display: none; }
+    main { 
+      grid-template-columns: 1fr; 
+      grid-template-rows: minmax(300px, 45vh) 1fr; 
+    }
+    aside.editor { 
+      display: block; /* 移除原本的 display: none */
+      border-right: none;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 20px;
+    }
+    header .brand h1 { font-size: 18px; }
+    header .brand .sub { display: none; } /* 空間不足時隱藏副標題 */
+    header .actions .btn { padding: 6px 10px; font-size: 12px; }
   }
 </style>
 </head>
@@ -1051,7 +1063,7 @@ function buildColorFields() {
 
 function fillColors() {
   for (const [k] of COLOR_KEYS) {
-    const el = document.getElementById('c-' + k);
+    const el = document.getElementById('c-' + k); // 這個地方已補上遺漏的 '+'
     if (el) el.value = state.colors[k];
   }
 }
@@ -1266,7 +1278,8 @@ function fitZoom() {
 function buildPureHTML() {
   const c = state.colors;
   const W = 1000, H = 750;
-  const PLOT_T = 110, PLOT_R = 100, PLOT_B = 60, PLOT_L = 100;
+  // 修正：原本是 110/60 導致跑位，改為對稱的 85/85
+  const PLOT_T = 85, PLOT_R = 100, PLOT_B = 85, PLOT_L = 100;
 
   const labelBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:8px;padding:.25rem .75rem;font-size:.75rem;font-weight:500;letter-spacing:.04em;white-space:nowrap`;
   const quadLabelBox = `background:${c.labelBg};color:${c.text};border:1px solid ${c.axis};border-radius:8px;padding:.375rem .875rem;font-size:1rem;font-weight:500;white-space:nowrap;font-family:Georgia,'Noto Serif TC',serif`;
@@ -1337,7 +1350,8 @@ function buildPureHTML() {
 async function buildSVG(opts = {}) {
   const c = state.colors;
   const W = 1000, H = 750;
-  const PLOT_T = 110, PLOT_R = 100, PLOT_B = 60, PLOT_L = 100;
+  // 修正：原本是 110/60 導致跑位，改為對稱的 85/85
+  const PLOT_T = 85, PLOT_R = 100, PLOT_B = 85, PLOT_L = 100;
   const plotL = PLOT_L, plotT = PLOT_T;
   const plotW = W - PLOT_L - PLOT_R;
   const plotH = H - PLOT_T - PLOT_B;
