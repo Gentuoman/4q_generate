@@ -892,7 +892,7 @@ function renderChart() {
   state.characters.forEach((ch, i) => {
     const sz = ch.size || 56;
     const avatarStyle = ch.avatar
-      ? `background-image:url('${escapeAttr(ch.avatar)}');`
+      ? `background-image:url('${escapeAttr(ch.avatar)}'); border: none; background-color: transparent;`
       : '';
     const initial = ch.avatar ? '' : initialOf(ch.name);
     html += `<div class="character" data-idx="${i}" style="left:${ch.x}%;top:${ch.y}%;color:${c.axis};">
@@ -1082,7 +1082,7 @@ function buildCharList() {
     row.className = 'char-row' + (editingCharIndex === i ? ' editing' : '');
     const initial = ch.avatar ? '' : initialOf(ch.name);
     const avatarBg = ch.avatar
-      ? `background-image:url('${escapeAttr(ch.avatar)}');`
+      ? `background-image:url('${escapeAttr(ch.avatar)}'); border-color: transparent; background-color: transparent;`
       : '';
     row.innerHTML = `
       <span class="drag-handle" title="拖曳排序">⋮⋮</span>
@@ -1323,7 +1323,7 @@ function buildPureHTML() {
   state.characters.forEach(ch => {
     const sz = ch.size || 56;
     const inner = ch.avatar
-      ? `<img src="${escapeAttr(ch.avatar)}" alt="${escapeAttr(ch.name)}" style="width:${sz}px;height:${sz}px;border-radius:50%;border:2px solid ${c.axis};display:block;object-fit:cover">`
+      ? `<img src="${escapeAttr(ch.avatar)}" alt="${escapeAttr(ch.name)}" style="width:${sz}px;height:${sz}px;border-radius:50%;display:block;object-fit:cover">`
       : `<div style="width:${sz}px;height:${sz}px;border-radius:50%;border:2px solid ${c.axis};background:${c.labelBg};display:flex;align-items:center;justify-content:center;font-size:${(sz * 0.4 / 16).toFixed(3)}rem;font-weight:600;color:${c.text};font-family:Georgia,serif;box-sizing:border-box">${escapeHtml(initialOf(ch.name))}</div>`;
 
     let charBlock = `<div style="display:flex;flex-direction:column;align-items:center">`;
@@ -1452,7 +1452,6 @@ async function buildSVG(opts = {}) {
     if (ch.avatar) {
       const src = avatarMap.get(ch.avatar) || ch.avatar;
       svg += `  <image href="${esc(src)}" x="${cx - sz/2}" y="${ay - sz/2}" width="${sz}" height="${sz}" clip-path="url(#ava-clip-${i})" preserveAspectRatio="xMidYMid slice"/>\n`;
-      svg += `  <circle cx="${cx}" cy="${ay}" r="${sz/2}" fill="none" stroke="${c.axis}" stroke-width="2"/>\n`;
     } else {
       svg += `  <circle cx="${cx}" cy="${ay}" r="${sz/2}" fill="${c.labelBg}" stroke="${c.axis}" stroke-width="2"/>\n`;
       svg += `  <text x="${cx}" y="${ay}" text-anchor="middle" dominant-baseline="central" fill="${c.text}" font-size="${Math.round(sz * 0.4)}" font-weight="600" font-family="Georgia, serif">${initial}</text>\n`;
