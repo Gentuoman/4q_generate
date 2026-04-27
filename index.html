@@ -433,6 +433,8 @@
       cursor:grab;
       user-select:none;
       touch-action:none;
+      text-decoration:none;
+      color:inherit;
     }
 
     .roleToken:active{ cursor:grabbing; }
@@ -775,10 +777,10 @@
         qBR:{text:'不坦率 × 好麻煩', x:68, y:88}
       },
       roles:[
-        {id:uid(), name:'直球甜妹', img:'https://placehold.co/200x200/ffd1dc/333?text=A', x:22, y:24, size:78},
-        {id:uid(), name:'麻煩女王', img:'https://placehold.co/200x200/cdb4db/333?text=B', x:76, y:24, size:78},
-        {id:uid(), name:'嘴硬青梅', img:'https://placehold.co/200x200/bde0fe/333?text=C', x:28, y:75, size:78},
-        {id:uid(), name:'冰山學姊', img:'https://placehold.co/200x200/ffc8dd/333?text=D', x:77, y:76, size:78}
+        {id:uid(), name:'直球甜妹', img:'https://placehold.co/200x200/ffd1dc/333?text=A', link:'https://example.com/aika', x:22, y:24, size:78},
+        {id:uid(), name:'麻煩女王', img:'https://placehold.co/200x200/cdb4db/333?text=B', link:'https://example.com/mina', x:76, y:24, size:78},
+        {id:uid(), name:'嘴硬青梅', img:'https://placehold.co/200x200/bde0fe/333?text=C', link:'https://example.com/rin', x:28, y:75, size:78},
+        {id:uid(), name:'冰山學姊', img:'https://placehold.co/200x200/ffc8dd/333?text=D', link:'https://example.com/yuki', x:77, y:76, size:78}
       ]
     };
   }
@@ -913,11 +915,18 @@
     const board = $('board');
 
     state.roles.forEach(role => {
-      const token = document.createElement('div');
+      const token = document.createElement(role.link ? 'a' : 'div');
       token.className = 'roleToken';
       token.dataset.id = role.id;
       token.style.left = clamp(role.x,0,100) + '%';
       token.style.top = clamp(role.y,0,100) + '%';
+
+      if(role.link){
+        token.href = role.link;
+        token.target = '_blank';
+        token.rel = 'noopener noreferrer';
+        token.title = `開啟角色頁面：${role.name}`;
+      }
 
       const imgBox = document.createElement('div');
       imgBox.className = 'roleImg';
@@ -972,6 +981,11 @@
         </div>
 
         <div class="field">
+          <label>角色頁面超連結</label>
+          <input type="text" data-field="link" value="${escapeAttr(role.link || '')}" placeholder="https://example.com/character">
+        </div>
+
+        <div class="field">
           <label class="rangeLabel">X 位置 <span data-value="x" class="rangeValue">${formatNum(role.x)}%</span></label>
           <input type="range" min="0" max="100" step="0.1" data-field="x" value="${role.x}">
         </div>
@@ -994,6 +1008,7 @@
 
       const nameInput = card.querySelector('input[data-field="name"]');
       const imgInput = card.querySelector('input[data-field="img"]');
+      const linkInput = card.querySelector('input[data-field="link"]');
       const xInput = card.querySelector('input[data-field="x"]');
       const yInput = card.querySelector('input[data-field="y"]');
       const sizeInput = card.querySelector('input[data-field="size"]');
@@ -1007,6 +1022,11 @@
       imgInput.addEventListener('input', () => {
         role.img = imgInput.value;
         card.querySelector('.miniAvatar img').src = role.img;
+        renderRoleTokens();
+      });
+
+      linkInput.addEventListener('input', () => {
+        role.link = linkInput.value.trim();
         renderRoleTokens();
       });
 
@@ -1100,6 +1120,7 @@
           id:uid(),
           name:`新角色${i + 1}`,
           img:`https://placehold.co/200x200/eeeeee/333?text=${i + 1}`,
+          link:'',
           x:50,
           y:50,
           size:74
@@ -1123,6 +1144,7 @@
       id:uid(),
       name:`新角色${nextNumber}`,
       img:`https://placehold.co/200x200/eeeeee/333?text=${nextNumber}`,
+      link:'',
       x:50,
       y:50,
       size:74
@@ -1248,7 +1270,9 @@
         'flex-direction:column',
         'align-items:center',
         'gap:7px',
-        'user-select:none'
+        'user-select:none',
+        'text-decoration:none',
+        'color:inherit'
       ].join(';');
 
       const imgBoxStyle = [
@@ -1284,7 +1308,13 @@
         'text-shadow:0 .125rem .5rem rgba(0,0,0,.5)'
       ].join(';');
 
-      return `<div style="${tokenStyle}"><div style="${imgBoxStyle}"><img src="${escapeAttr(role.img)}" alt="${escapeAttr(role.name)}" style="${imgStyle}"></div><span style="${nameStyle}">${escapeHtml(role.name)}</span></div>`;
+      const inner = `<div style="${imgBoxStyle}"><img src="${escapeAttr(role.img)}" alt="${escapeAttr(role.name)}" style="${imgStyle}"></div><span style="${nameStyle}">${escapeHtml(role.name)}</span>`;
+
+      if(role.link){
+        return `<a href="${escapeAttr(role.link)}" target="_blank" rel="noopener noreferrer" style="${tokenStyle}">${inner}</a>`;
+      }
+
+      return `<div style="${tokenStyle}">${inner}</div>`;
     }).join('');
 
     return `<div style="${rootStyle}"><div style="${titleStyle}">${escapeHtml(state.title)}</div><div style="${boardStyle}"><div style="${quadBase};left:0;top:0;background:${c.qTL}"></div><div style="${quadBase};right:0;top:0;background:${c.qTR}"></div><div style="${quadBase};left:0;bottom:0;background:${c.qBL}"></div><div style="${quadBase};right:0;bottom:0;background:${c.qBR}"></div><div style="${axisVStyle}"></div><div style="${axisHStyle}"></div><span style="${axisNameBase};left:16px;top:50%;transform:translateY(-50%)">${escapeHtml(state.axes.xLeft)}</span><span style="${axisNameBase};right:16px;top:50%;transform:translateY(-50%)">${escapeHtml(state.axes.xRight)}</span><span style="${axisNameBase};left:50%;top:16px;transform:translateX(-50%)">${escapeHtml(state.axes.yTop)}</span><span style="${axisNameBase};left:50%;bottom:16px;transform:translateX(-50%)">${escapeHtml(state.axes.yBottom)}</span><span style="${quadNameBase};left:${clamp(q.qTL.x,0,100)}%;top:${clamp(q.qTL.y,0,100)}%">${escapeHtml(q.qTL.text)}</span><span style="${quadNameBase};left:${clamp(q.qTR.x,0,100)}%;top:${clamp(q.qTR.y,0,100)}%">${escapeHtml(q.qTR.text)}</span><span style="${quadNameBase};left:${clamp(q.qBL.x,0,100)}%;top:${clamp(q.qBL.y,0,100)}%">${escapeHtml(q.qBL.text)}</span><span style="${quadNameBase};left:${clamp(q.qBR.x,0,100)}%;top:${clamp(q.qBR.y,0,100)}%">${escapeHtml(q.qBR.text)}</span>${roleHtml}</div></div>`;
