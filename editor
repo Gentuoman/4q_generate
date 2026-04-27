@@ -1,0 +1,1390 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>四象限 HTML 編輯器</title>
+
+  <!-- PNG / JPG export -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --app-bg:#0f1117;
+      --panel:#181b24;
+      --panel-2:#202431;
+      --line:#353b4d;
+      --text:#f2f4f8;
+      --muted:#a8b0c3;
+      --accent:#7c8cff;
+      --radius:18px;
+      --shadow:0 18px 45px rgba(0,0,0,.35);
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+      background:
+        radial-gradient(900px 500px at 12% 8%, rgba(124,140,255,.22), transparent 60%),
+        radial-gradient(900px 500px at 88% 20%, rgba(255,153,204,.14), transparent 55%),
+        var(--app-bg);
+      color:var(--text);
+      min-height:100vh;
+      padding:18px;
+    }
+
+    .app{
+      max-width:1480px;
+      margin:auto;
+      display:grid;
+      grid-template-columns:410px minmax(640px,1fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .panelHeader{
+      padding:16px 18px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.035);
+    }
+
+    .panelHeader h1,
+    .panelHeader h2{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.04em;
+    }
+
+    .panelHeader p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .controls{
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      max-height:calc(100vh - 36px);
+      overflow:auto;
+    }
+
+    .section{
+      padding:14px;
+      background:rgba(0,0,0,.15);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .sectionTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size:13px;
+      color:#fff;
+      font-weight:800;
+      letter-spacing:.04em;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .grid3{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+
+    code{
+      padding:1px 4px;
+      border-radius:5px;
+      background:rgba(255,255,255,.08);
+      color:#fff;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select{
+      width:100%;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.25);
+      color:var(--text);
+      border-radius:10px;
+      padding:9px 10px;
+      outline:none;
+      font:inherit;
+      font-size:13px;
+    }
+
+    textarea{
+      min-height:220px;
+      resize:vertical;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      line-height:1.5;
+      font-size:12px;
+    }
+
+    input[type="color"]{
+      width:100%;
+      height:38px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.25);
+      border-radius:10px;
+      padding:4px;
+      cursor:pointer;
+    }
+
+    input[type="range"]{
+      width:100%;
+      accent-color:var(--accent);
+    }
+
+    button{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      font:inherit;
+      font-size:13px;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+
+    button:hover{
+      background:rgba(255,255,255,.14);
+      transform:translateY(-1px);
+    }
+
+    button.primary{
+      background:linear-gradient(135deg, #7c8cff, #b980ff);
+      border-color:rgba(255,255,255,.24);
+      color:white;
+      font-weight:800;
+    }
+
+    button.danger{
+      background:rgba(255,80,100,.14);
+      border-color:rgba(255,80,100,.35);
+    }
+
+    .roleList{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .roleCard{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.045);
+      border-radius:14px;
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .roleTop{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .miniAvatar{
+      width:42px;
+      height:42px;
+      border-radius:999px;
+      overflow:hidden;
+      border:2px solid rgba(255,255,255,.45);
+      background:rgba(0,0,0,.25);
+      flex:0 0 auto;
+    }
+
+    .miniAvatar img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .roleTopName{
+      flex:1;
+      min-width:0;
+      font-size:13px;
+      font-weight:800;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .rangeLabel{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+
+    .rangeValue{
+      color:#fff;
+      font-weight:800;
+      font-variant-numeric:tabular-nums;
+    }
+
+    .previewPanel{
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .previewToolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .previewToolbarLeft,
+    .previewToolbarRight{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .canvasShell{
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:var(--radius);
+      padding:14px;
+      overflow:auto;
+    }
+
+    /* ======= Export target ======= */
+
+    .quadrantExport{
+      width:1000px;
+      height:760px;
+      position:relative;
+      background:#10131c;
+      border-radius:24px;
+      overflow:hidden;
+      box-shadow:0 18px 48px rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.12);
+      color:#ffffff;
+    }
+
+    .qTitle{
+      position:absolute;
+      left:50%;
+      top:24px;
+      transform:translateX(-50%);
+      z-index:20;
+      font-size:30px;
+      font-weight:900;
+      letter-spacing:.06em;
+      white-space:nowrap;
+      text-shadow:0 3px 12px rgba(0,0,0,.36);
+      pointer-events:none;
+    }
+
+    .qBoard{
+      position:absolute;
+      left:54px;
+      right:54px;
+      top:94px;
+      bottom:54px;
+      border-radius:20px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.16);
+      background:#171b26;
+    }
+
+    .quad{
+      position:absolute;
+      width:50%;
+      height:50%;
+    }
+
+    .quad.qTL{ left:0; top:0; }
+    .quad.qTR{ right:0; top:0; }
+    .quad.qBL{ left:0; bottom:0; }
+    .quad.qBR{ right:0; bottom:0; }
+
+    .axisVertical,
+    .axisHorizontal{
+      position:absolute;
+      z-index:8;
+      background:#ffffff;
+      opacity:.8;
+      pointer-events:none;
+    }
+
+    .axisVertical{
+      width:3px;
+      height:100%;
+      left:50%;
+      top:0;
+      transform:translateX(-50%);
+    }
+
+    .axisHorizontal{
+      height:3px;
+      width:100%;
+      left:0;
+      top:50%;
+      transform:translateY(-50%);
+    }
+
+    .axisName{
+      position:absolute;
+      z-index:15;
+      padding:7px 12px;
+      border-radius:999px;
+      background:rgba(0,0,0,.32);
+      border:1px solid rgba(255,255,255,.22);
+      backdrop-filter:blur(8px);
+      font-weight:800;
+      font-size:15px;
+      white-space:nowrap;
+      pointer-events:none;
+    }
+
+    .axisXLeft{
+      left:16px;
+      top:50%;
+      transform:translateY(-50%);
+    }
+
+    .axisXRight{
+      right:16px;
+      top:50%;
+      transform:translateY(-50%);
+    }
+
+    .axisYTop{
+      left:50%;
+      top:16px;
+      transform:translateX(-50%);
+    }
+
+    .axisYBottom{
+      left:50%;
+      bottom:16px;
+      transform:translateX(-50%);
+    }
+
+    .quadName{
+      position:absolute;
+      z-index:10;
+      padding:8px 12px;
+      border-radius:14px;
+      background:rgba(0,0,0,.23);
+      border:1px solid rgba(255,255,255,.18);
+      backdrop-filter:blur(8px);
+      font-weight:800;
+      font-size:15px;
+      line-height:1.2;
+      white-space:nowrap;
+      pointer-events:none;
+    }
+
+    .roleToken{
+      position:absolute;
+      z-index:30;
+      transform:translate(-50%, -50%);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:7px;
+      cursor:grab;
+      user-select:none;
+      touch-action:none;
+    }
+
+    .roleToken:active{ cursor:grabbing; }
+
+    .roleImg{
+      width:70px;
+      height:70px;
+      border-radius:999px;
+      overflow:hidden;
+      border:3px solid rgba(255,255,255,.85);
+      box-shadow:0 10px 25px rgba(0,0,0,.38);
+      background:rgba(255,255,255,.12);
+    }
+
+    .roleImg img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .roleName{
+      max-width:150px;
+      padding:5px 10px;
+      border-radius:999px;
+      background:rgba(0,0,0,.42);
+      border:1px solid rgba(255,255,255,.22);
+      color:#fff;
+      font-weight:800;
+      font-size:13px;
+      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      text-shadow:0 2px 8px rgba(0,0,0,.5);
+    }
+
+    .outputBox{ display:none; }
+    .outputBox.active{ display:block; }
+
+    .help{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    @media(max-width:1120px){
+      .app{ grid-template-columns:1fr; }
+      .controls{ max-height:none; }
+      .quadrantExport{ width:960px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <section class="panel">
+      <div class="panelHeader">
+        <h1>四象限 HTML 編輯器</h1>
+        <p>可編輯標題、軸名、象限名、顏色與角色頭像。角色可拖曳，也可用滑桿精準調整 X/Y/大小。</p>
+      </div>
+
+      <div class="controls">
+        <div class="section">
+          <div class="sectionTitle">基本設定</div>
+
+          <div class="field">
+            <label>標題名稱</label>
+            <input id="titleInput" type="text" value="戀愛系角色四象限分析">
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>X 軸左側名稱</label>
+              <input id="xLeftInput" type="text" value="好應付">
+            </div>
+            <div class="field">
+              <label>X 軸右側名稱</label>
+              <input id="xRightInput" type="text" value="好麻煩">
+            </div>
+            <div class="field">
+              <label>Y 軸上方名稱</label>
+              <input id="yTopInput" type="text" value="坦率">
+            </div>
+            <div class="field">
+              <label>Y 軸下方名稱</label>
+              <input id="yBottomInput" type="text" value="不坦率">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sectionTitle">象限名稱與名稱位置</div>
+
+          <div class="field">
+            <label>左上象限名稱</label>
+            <input id="qTLName" type="text" value="坦率 × 好應付">
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label class="rangeLabel">左上名稱 X <span id="qTLXValue" class="rangeValue">16%</span></label>
+              <input id="qTLX" type="range" value="16" min="0" max="100" step="0.5">
+            </div>
+            <div class="field">
+              <label class="rangeLabel">左上名稱 Y <span id="qTLYValue" class="rangeValue">8%</span></label>
+              <input id="qTLY" type="range" value="8" min="0" max="100" step="0.5">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>右上象限名稱</label>
+            <input id="qTRName" type="text" value="坦率 × 好麻煩">
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label class="rangeLabel">右上名稱 X <span id="qTRXValue" class="rangeValue">68%</span></label>
+              <input id="qTRX" type="range" value="68" min="0" max="100" step="0.5">
+            </div>
+            <div class="field">
+              <label class="rangeLabel">右上名稱 Y <span id="qTRYValue" class="rangeValue">8%</span></label>
+              <input id="qTRY" type="range" value="8" min="0" max="100" step="0.5">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>左下象限名稱</label>
+            <input id="qBLName" type="text" value="不坦率 × 好應付">
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label class="rangeLabel">左下名稱 X <span id="qBLXValue" class="rangeValue">16%</span></label>
+              <input id="qBLX" type="range" value="16" min="0" max="100" step="0.5">
+            </div>
+            <div class="field">
+              <label class="rangeLabel">左下名稱 Y <span id="qBLYValue" class="rangeValue">88%</span></label>
+              <input id="qBLY" type="range" value="88" min="0" max="100" step="0.5">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>右下象限名稱</label>
+            <input id="qBRName" type="text" value="不坦率 × 好麻煩">
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label class="rangeLabel">右下名稱 X <span id="qBRXValue" class="rangeValue">68%</span></label>
+              <input id="qBRX" type="range" value="68" min="0" max="100" step="0.5">
+            </div>
+            <div class="field">
+              <label class="rangeLabel">右下名稱 Y <span id="qBRYValue" class="rangeValue">88%</span></label>
+              <input id="qBRY" type="range" value="88" min="0" max="100" step="0.5">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sectionTitle">顏色編輯</div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>整體背景</label>
+              <input id="bgColor" type="color" value="#10131c">
+            </div>
+            <div class="field">
+              <label>文字顏色</label>
+              <input id="textColor" type="color" value="#ffffff">
+            </div>
+            <div class="field">
+              <label>軸線顏色</label>
+              <input id="axisColor" type="color" value="#ffffff">
+            </div>
+            <div class="field">
+              <label>名稱底色</label>
+              <input id="labelBgColor" type="color" value="#000000">
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>左上象限底色</label>
+              <input id="qTLColor" type="color" value="#355c7d">
+            </div>
+            <div class="field">
+              <label>右上象限底色</label>
+              <input id="qTRColor" type="color" value="#6c5b7b">
+            </div>
+            <div class="field">
+              <label>左下象限底色</label>
+              <input id="qBLColor" type="color" value="#99b898">
+            </div>
+            <div class="field">
+              <label>右下象限底色</label>
+              <input id="qBRColor" type="color" value="#c06c84">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sectionTitle">
+            <span>角色頭像</span>
+            <button id="addRoleBtn" class="primary" type="button">＋新增角色</button>
+          </div>
+
+          <div class="help">
+            圖片路徑建議使用同 repo 內的檔案，例如：<code>images/a.png</code>。角色可拖曳，也可用下方滑桿調整 X/Y/大小。
+          </div>
+
+          <div class="field">
+            <label class="rangeLabel">角色數量 <span id="roleCountValue" class="rangeValue">4 位</span></label>
+            <input id="roleCountInput" type="range" min="1" max="50" step="1" value="4">
+          </div>
+
+          <div id="roleList" class="roleList"></div>
+        </div>
+
+        <div class="section">
+          <div class="sectionTitle">專案資料</div>
+          <div class="grid2">
+            <button id="saveJsonBtn" type="button">下載設定 JSON</button>
+            <button id="loadJsonBtn" type="button">載入設定 JSON</button>
+          </div>
+          <input id="jsonFileInput" type="file" accept="application/json" style="display:none;">
+        </div>
+      </div>
+    </section>
+
+    <section class="panel previewPanel">
+      <div class="previewToolbar">
+        <div class="previewToolbarLeft">
+          <button id="exportHtmlBtn" class="primary" type="button">輸出純 HTML</button>
+          <button id="exportSvgBtn" type="button">下載 SVG</button>
+          <button id="exportPngBtn" type="button">下載 PNG</button>
+          <button id="exportJpgBtn" type="button">下載 JPG</button>
+        </div>
+        <div class="previewToolbarRight">
+          <button id="copyHtmlBtn" type="button">複製 HTML</button>
+          <button id="resetBtn" class="danger" type="button">重置示範資料</button>
+        </div>
+      </div>
+
+      <div class="canvasShell">
+        <div id="exportArea" class="quadrantExport">
+          <div id="displayTitle" class="qTitle">戀愛系角色四象限分析</div>
+
+          <div id="board" class="qBoard">
+            <div id="quadTL" class="quad qTL"></div>
+            <div id="quadTR" class="quad qTR"></div>
+            <div id="quadBL" class="quad qBL"></div>
+            <div id="quadBR" class="quad qBR"></div>
+
+            <div id="axisV" class="axisVertical"></div>
+            <div id="axisH" class="axisHorizontal"></div>
+
+            <div id="axisXLeft" class="axisName axisXLeft">好應付</div>
+            <div id="axisXRight" class="axisName axisXRight">好麻煩</div>
+            <div id="axisYTop" class="axisName axisYTop">坦率</div>
+            <div id="axisYBottom" class="axisName axisYBottom">不坦率</div>
+
+            <div id="quadNameTL" class="quadName">坦率 × 好應付</div>
+            <div id="quadNameTR" class="quadName">坦率 × 好麻煩</div>
+            <div id="quadNameBL" class="quadName">不坦率 × 好應付</div>
+            <div id="quadNameBR" class="quadName">不坦率 × 好麻煩</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="outputBox" class="outputBox">
+        <textarea id="outputHtml" readonly></textarea>
+      </div>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  let state = getDefaultState();
+  let dragging = null;
+
+  const controls = [
+    'titleInput','xLeftInput','xRightInput','yTopInput','yBottomInput',
+    'qTLName','qTRName','qBLName','qBRName',
+    'qTLX','qTLY','qTRX','qTRY','qBLX','qBLY','qBRX','qBRY',
+    'bgColor','textColor','axisColor','labelBgColor',
+    'qTLColor','qTRColor','qBLColor','qBRColor'
+  ];
+
+  init();
+
+  function init(){
+    hydrateControlsFromState();
+    renderRolesEditor();
+    renderAll();
+
+    controls.forEach(id => {
+      $(id).addEventListener('input', () => {
+        pullControlsToState();
+        renderAll();
+      });
+    });
+
+    $('addRoleBtn').addEventListener('click', addRole);
+    $('roleCountInput').addEventListener('input', syncRoleCountFromBar);
+    $('resetBtn').addEventListener('click', resetData);
+    $('exportHtmlBtn').addEventListener('click', exportHtmlToBox);
+    $('copyHtmlBtn').addEventListener('click', copyHtml);
+    $('exportSvgBtn').addEventListener('click', downloadSvg);
+    $('exportPngBtn').addEventListener('click', () => downloadRaster('png'));
+    $('exportJpgBtn').addEventListener('click', () => downloadRaster('jpg'));
+    $('saveJsonBtn').addEventListener('click', saveJson);
+    $('loadJsonBtn').addEventListener('click', () => $('jsonFileInput').click());
+    $('jsonFileInput').addEventListener('change', loadJson);
+
+    window.addEventListener('resize', renderRoleTokens);
+  }
+
+  function getDefaultState(){
+    return {
+      title:'戀愛系角色四象限分析',
+      axes:{
+        xLeft:'好應付',
+        xRight:'好麻煩',
+        yTop:'坦率',
+        yBottom:'不坦率'
+      },
+      colors:{
+        bg:'#10131c',
+        text:'#ffffff',
+        axis:'#ffffff',
+        labelBg:'#000000',
+        qTL:'#355c7d',
+        qTR:'#6c5b7b',
+        qBL:'#99b898',
+        qBR:'#c06c84'
+      },
+      quadrantNames:{
+        qTL:{text:'坦率 × 好應付', x:16, y:8},
+        qTR:{text:'坦率 × 好麻煩', x:68, y:8},
+        qBL:{text:'不坦率 × 好應付', x:16, y:88},
+        qBR:{text:'不坦率 × 好麻煩', x:68, y:88}
+      },
+      roles:[
+        {id:uid(), name:'直球甜妹', img:'https://placehold.co/200x200/ffd1dc/333?text=A', x:22, y:24, size:78},
+        {id:uid(), name:'麻煩女王', img:'https://placehold.co/200x200/cdb4db/333?text=B', x:76, y:24, size:78},
+        {id:uid(), name:'嘴硬青梅', img:'https://placehold.co/200x200/bde0fe/333?text=C', x:28, y:75, size:78},
+        {id:uid(), name:'冰山學姊', img:'https://placehold.co/200x200/ffc8dd/333?text=D', x:77, y:76, size:78}
+      ]
+    };
+  }
+
+  function hydrateControlsFromState(){
+    $('titleInput').value = state.title;
+    $('xLeftInput').value = state.axes.xLeft;
+    $('xRightInput').value = state.axes.xRight;
+    $('yTopInput').value = state.axes.yTop;
+    $('yBottomInput').value = state.axes.yBottom;
+
+    $('qTLName').value = state.quadrantNames.qTL.text;
+    $('qTRName').value = state.quadrantNames.qTR.text;
+    $('qBLName').value = state.quadrantNames.qBL.text;
+    $('qBRName').value = state.quadrantNames.qBR.text;
+
+    $('qTLX').value = state.quadrantNames.qTL.x;
+    $('qTLY').value = state.quadrantNames.qTL.y;
+    $('qTRX').value = state.quadrantNames.qTR.x;
+    $('qTRY').value = state.quadrantNames.qTR.y;
+    $('qBLX').value = state.quadrantNames.qBL.x;
+    $('qBLY').value = state.quadrantNames.qBL.y;
+    $('qBRX').value = state.quadrantNames.qBR.x;
+    $('qBRY').value = state.quadrantNames.qBR.y;
+
+    $('bgColor').value = state.colors.bg;
+    $('textColor').value = state.colors.text;
+    $('axisColor').value = state.colors.axis;
+    $('labelBgColor').value = state.colors.labelBg;
+    $('qTLColor').value = state.colors.qTL;
+    $('qTRColor').value = state.colors.qTR;
+    $('qBLColor').value = state.colors.qBL;
+    $('qBRColor').value = state.colors.qBR;
+
+    syncRangeValueLabels();
+    syncRoleCountUI();
+  }
+
+  function pullControlsToState(){
+    state.title = $('titleInput').value;
+    state.axes.xLeft = $('xLeftInput').value;
+    state.axes.xRight = $('xRightInput').value;
+    state.axes.yTop = $('yTopInput').value;
+    state.axes.yBottom = $('yBottomInput').value;
+
+    state.quadrantNames.qTL.text = $('qTLName').value;
+    state.quadrantNames.qTR.text = $('qTRName').value;
+    state.quadrantNames.qBL.text = $('qBLName').value;
+    state.quadrantNames.qBR.text = $('qBRName').value;
+
+    state.quadrantNames.qTL.x = num($('qTLX').value,16);
+    state.quadrantNames.qTL.y = num($('qTLY').value,8);
+    state.quadrantNames.qTR.x = num($('qTRX').value,68);
+    state.quadrantNames.qTR.y = num($('qTRY').value,8);
+    state.quadrantNames.qBL.x = num($('qBLX').value,16);
+    state.quadrantNames.qBL.y = num($('qBLY').value,88);
+    state.quadrantNames.qBR.x = num($('qBRX').value,68);
+    state.quadrantNames.qBR.y = num($('qBRY').value,88);
+
+    state.colors.bg = $('bgColor').value;
+    state.colors.text = $('textColor').value;
+    state.colors.axis = $('axisColor').value;
+    state.colors.labelBg = $('labelBgColor').value;
+    state.colors.qTL = $('qTLColor').value;
+    state.colors.qTR = $('qTRColor').value;
+    state.colors.qBL = $('qBLColor').value;
+    state.colors.qBR = $('qBRColor').value;
+
+    syncRangeValueLabels();
+  }
+
+  function syncRangeValueLabels(){
+    const pairs = [
+      ['qTLX','qTLXValue'], ['qTLY','qTLYValue'],
+      ['qTRX','qTRXValue'], ['qTRY','qTRYValue'],
+      ['qBLX','qBLXValue'], ['qBLY','qBLYValue'],
+      ['qBRX','qBRXValue'], ['qBRY','qBRYValue']
+    ];
+
+    pairs.forEach(([inputId, valueId]) => {
+      if($(inputId) && $(valueId)) $(valueId).textContent = `${Number($(inputId).value).toFixed(1).replace('.0','')}%`;
+    });
+  }
+
+  function renderAll(){
+    renderBoardStyle();
+    renderRoleTokens();
+  }
+
+  function renderBoardStyle(){
+    $('exportArea').style.background = state.colors.bg;
+    $('exportArea').style.color = state.colors.text;
+
+    $('displayTitle').textContent = state.title;
+    $('displayTitle').style.color = state.colors.text;
+
+    $('axisXLeft').textContent = state.axes.xLeft;
+    $('axisXRight').textContent = state.axes.xRight;
+    $('axisYTop').textContent = state.axes.yTop;
+    $('axisYBottom').textContent = state.axes.yBottom;
+
+    $('quadTL').style.background = state.colors.qTL;
+    $('quadTR').style.background = state.colors.qTR;
+    $('quadBL').style.background = state.colors.qBL;
+    $('quadBR').style.background = state.colors.qBR;
+
+    $('axisV').style.background = state.colors.axis;
+    $('axisH').style.background = state.colors.axis;
+
+    ['axisXLeft','axisXRight','axisYTop','axisYBottom','quadNameTL','quadNameTR','quadNameBL','quadNameBR'].forEach(id=>{
+      $(id).style.color = state.colors.text;
+      $(id).style.background = hexToRgba(state.colors.labelBg,.34);
+    });
+
+    setQuadName('TL', state.quadrantNames.qTL);
+    setQuadName('TR', state.quadrantNames.qTR);
+    setQuadName('BL', state.quadrantNames.qBL);
+    setQuadName('BR', state.quadrantNames.qBR);
+  }
+
+  function setQuadName(key, data){
+    const el = $('quadName' + key);
+    el.textContent = data.text;
+    el.style.left = clamp(data.x,0,100) + '%';
+    el.style.top = clamp(data.y,0,100) + '%';
+    el.style.transform = 'translate(-50%, -50%)';
+  }
+
+  function renderRoleTokens(){
+    document.querySelectorAll('.roleToken').forEach(el => el.remove());
+
+    const board = $('board');
+
+    state.roles.forEach(role => {
+      const token = document.createElement('div');
+      token.className = 'roleToken';
+      token.dataset.id = role.id;
+      token.style.left = clamp(role.x,0,100) + '%';
+      token.style.top = clamp(role.y,0,100) + '%';
+
+      const imgBox = document.createElement('div');
+      imgBox.className = 'roleImg';
+      imgBox.style.width = role.size + 'px';
+      imgBox.style.height = role.size + 'px';
+
+      const img = document.createElement('img');
+      img.src = role.img;
+      img.alt = role.name;
+      img.crossOrigin = 'anonymous';
+
+      const name = document.createElement('div');
+      name.className = 'roleName';
+      name.textContent = role.name;
+      name.style.color = state.colors.text;
+      name.style.background = hexToRgba(state.colors.labelBg,.42);
+
+      imgBox.appendChild(img);
+      token.appendChild(imgBox);
+      token.appendChild(name);
+
+      enableDrag(token, role);
+      board.appendChild(token);
+    });
+  }
+
+  function renderRolesEditor(){
+    const list = $('roleList');
+    list.innerHTML = '';
+
+    syncRoleCountUI();
+
+    state.roles.forEach((role, index) => {
+      const card = document.createElement('div');
+      card.className = 'roleCard';
+
+      card.innerHTML = `
+        <div class="roleTop">
+          <div class="miniAvatar"><img src="${escapeAttr(role.img)}" alt=""></div>
+          <div class="roleTopName">${escapeHtml(role.name)}</div>
+          <button type="button" class="danger" data-action="delete">刪除</button>
+        </div>
+
+        <div class="field">
+          <label>角色名稱</label>
+          <input type="text" data-field="name" value="${escapeAttr(role.name)}">
+        </div>
+
+        <div class="field">
+          <label>頭像圖片 img 路徑</label>
+          <input type="text" data-field="img" value="${escapeAttr(role.img)}">
+        </div>
+
+        <div class="field">
+          <label class="rangeLabel">X 位置 <span data-value="x" class="rangeValue">${formatNum(role.x)}%</span></label>
+          <input type="range" min="0" max="100" step="0.1" data-field="x" value="${role.x}">
+        </div>
+
+        <div class="field">
+          <label class="rangeLabel">Y 位置 <span data-value="y" class="rangeValue">${formatNum(role.y)}%</span></label>
+          <input type="range" min="0" max="100" step="0.1" data-field="y" value="${role.y}">
+        </div>
+
+        <div class="field">
+          <label class="rangeLabel">頭像大小 <span data-value="size" class="rangeValue">${role.size}px</span></label>
+          <input type="range" min="32" max="180" step="1" data-field="size" value="${role.size}">
+        </div>
+
+        <div class="grid2">
+          <button type="button" data-action="moveUp">上移</button>
+          <button type="button" data-action="moveDown">下移</button>
+        </div>
+      `;
+
+      const nameInput = card.querySelector('input[data-field="name"]');
+      const imgInput = card.querySelector('input[data-field="img"]');
+      const xInput = card.querySelector('input[data-field="x"]');
+      const yInput = card.querySelector('input[data-field="y"]');
+      const sizeInput = card.querySelector('input[data-field="size"]');
+
+      nameInput.addEventListener('input', () => {
+        role.name = nameInput.value;
+        card.querySelector('.roleTopName').textContent = role.name;
+        renderRoleTokens();
+      });
+
+      imgInput.addEventListener('input', () => {
+        role.img = imgInput.value;
+        card.querySelector('.miniAvatar img').src = role.img;
+        renderRoleTokens();
+      });
+
+      xInput.addEventListener('input', () => {
+        role.x = Number(xInput.value);
+        card.querySelector('[data-value="x"]').textContent = `${formatNum(role.x)}%`;
+        renderRoleTokens();
+      });
+
+      yInput.addEventListener('input', () => {
+        role.y = Number(yInput.value);
+        card.querySelector('[data-value="y"]').textContent = `${formatNum(role.y)}%`;
+        renderRoleTokens();
+      });
+
+      sizeInput.addEventListener('input', () => {
+        role.size = Number(sizeInput.value);
+        card.querySelector('[data-value="size"]').textContent = `${role.size}px`;
+        renderRoleTokens();
+      });
+
+      card.querySelector('[data-action="delete"]').addEventListener('click', () => {
+        state.roles = state.roles.filter(r => r.id !== role.id);
+        renderRolesEditor();
+        renderRoleTokens();
+      });
+
+      card.querySelector('[data-action="moveUp"]').addEventListener('click', () => {
+        if(index <= 0) return;
+        [state.roles[index - 1], state.roles[index]] = [state.roles[index], state.roles[index - 1]];
+        renderRolesEditor();
+        renderRoleTokens();
+      });
+
+      card.querySelector('[data-action="moveDown"]').addEventListener('click', () => {
+        if(index >= state.roles.length - 1) return;
+        [state.roles[index + 1], state.roles[index]] = [state.roles[index], state.roles[index + 1]];
+        renderRolesEditor();
+        renderRoleTokens();
+      });
+
+      list.appendChild(card);
+    });
+  }
+
+  function enableDrag(token, role){
+    token.addEventListener('pointerdown', (e) => {
+      token.setPointerCapture(e.pointerId);
+      dragging = { token, role };
+    });
+
+    token.addEventListener('pointermove', (e) => {
+      if(!dragging || dragging.role.id !== role.id) return;
+
+      const rect = $('board').getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      role.x = Math.round(clamp(x,0,100) * 10) / 10;
+      role.y = Math.round(clamp(y,0,100) * 10) / 10;
+
+      token.style.left = role.x + '%';
+      token.style.top = role.y + '%';
+    });
+
+    token.addEventListener('pointerup', () => {
+      dragging = null;
+      renderRolesEditor();
+    });
+
+    token.addEventListener('pointercancel', () => {
+      dragging = null;
+      renderRolesEditor();
+    });
+  }
+
+  function syncRoleCountUI(){
+    if(!$('roleCountInput') || !$('roleCountValue')) return;
+
+    $('roleCountInput').value = state.roles.length;
+    $('roleCountValue').textContent = `${state.roles.length} 位`;
+  }
+
+  function syncRoleCountFromBar(){
+    const targetCount = Number($('roleCountInput').value);
+    const currentCount = state.roles.length;
+
+    if(targetCount > currentCount){
+      for(let i = currentCount; i < targetCount; i++){
+        state.roles.push({
+          id:uid(),
+          name:`新角色${i + 1}`,
+          img:`https://placehold.co/200x200/eeeeee/333?text=${i + 1}`,
+          x:50,
+          y:50,
+          size:74
+        });
+      }
+    }
+
+    if(targetCount < currentCount){
+      state.roles = state.roles.slice(0, targetCount);
+    }
+
+    syncRoleCountUI();
+    renderRolesEditor();
+    renderRoleTokens();
+  }
+
+  function addRole(){
+    const nextNumber = state.roles.length + 1;
+
+    state.roles.push({
+      id:uid(),
+      name:`新角色${nextNumber}`,
+      img:`https://placehold.co/200x200/eeeeee/333?text=${nextNumber}`,
+      x:50,
+      y:50,
+      size:74
+    });
+
+    syncRoleCountUI();
+    renderRolesEditor();
+    renderRoleTokens();
+  }
+
+  function resetData(){
+    if(!confirm('確定要重置為示範資料？')) return;
+    state = getDefaultState();
+    hydrateControlsFromState();
+    renderRolesEditor();
+    renderAll();
+  }
+
+  function buildStandaloneHtml(){
+    const exportClone = $('exportArea').cloneNode(true);
+
+    exportClone.querySelectorAll('.roleToken').forEach(el => {
+      el.style.cursor = 'default';
+      el.style.touchAction = 'auto';
+    });
+
+    const css = `
+      *{box-sizing:border-box}
+      body{margin:0;padding:24px;background:#111;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+      .quadrantExport{width:1000px;height:760px;position:relative;background:${state.colors.bg};border-radius:24px;overflow:hidden;box-shadow:0 18px 48px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12);color:${state.colors.text}}
+      .qTitle{position:absolute;left:50%;top:24px;transform:translateX(-50%);z-index:20;font-size:30px;font-weight:900;letter-spacing:.06em;white-space:nowrap;text-shadow:0 3px 12px rgba(0,0,0,.36)}
+      .qBoard{position:absolute;left:54px;right:54px;top:94px;bottom:54px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:#171b26}
+      .quad{position:absolute;width:50%;height:50%}.quad.qTL{left:0;top:0}.quad.qTR{right:0;top:0}.quad.qBL{left:0;bottom:0}.quad.qBR{right:0;bottom:0}
+      .axisVertical,.axisHorizontal{position:absolute;z-index:8;background:${state.colors.axis};opacity:.8}
+      .axisVertical{width:3px;height:100%;left:50%;top:0;transform:translateX(-50%)}.axisHorizontal{height:3px;width:100%;left:0;top:50%;transform:translateY(-50%)}
+      .axisName{position:absolute;z-index:15;padding:7px 12px;border-radius:999px;background:${hexToRgba(state.colors.labelBg,.34)};border:1px solid rgba(255,255,255,.22);font-weight:800;font-size:15px;white-space:nowrap}
+      .axisXLeft{left:16px;top:50%;transform:translateY(-50%)}.axisXRight{right:16px;top:50%;transform:translateY(-50%)}.axisYTop{left:50%;top:16px;transform:translateX(-50%)}.axisYBottom{left:50%;bottom:16px;transform:translateX(-50%)}
+      .quadName{position:absolute;z-index:10;padding:8px 12px;border-radius:14px;background:${hexToRgba(state.colors.labelBg,.23)};border:1px solid rgba(255,255,255,.18);font-weight:800;font-size:15px;line-height:1.2;white-space:nowrap;transform:translate(-50%,-50%)}
+      .roleToken{position:absolute;z-index:30;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;user-select:none}
+      .roleImg{border-radius:999px;overflow:hidden;border:3px solid rgba(255,255,255,.85);box-shadow:0 10px 25px rgba(0,0,0,.38);background:rgba(255,255,255,.12)}
+      .roleImg img{width:100%;height:100%;object-fit:cover;display:block}
+      .roleName{max-width:150px;padding:5px 10px;border-radius:999px;background:${hexToRgba(state.colors.labelBg,.42)};border:1px solid rgba(255,255,255,.22);color:${state.colors.text};font-weight:800;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+    `;
+
+    return `<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(state.title)}</title>
+<style>${css}</style>
+</head>
+<body>
+${exportClone.outerHTML}
+</body>
+</html>`;
+  }
+
+  function exportHtmlToBox(){
+    const html = buildStandaloneHtml();
+    $('outputHtml').value = html;
+    $('outputBox').classList.add('active');
+    $('outputHtml').focus();
+    $('outputHtml').select();
+  }
+
+  async function copyHtml(){
+    const html = buildStandaloneHtml();
+    try{
+      await navigator.clipboard.writeText(html);
+      alert('已複製純 HTML。');
+    }catch{
+      $('outputHtml').value = html;
+      $('outputBox').classList.add('active');
+      $('outputHtml').focus();
+      $('outputHtml').select();
+      alert('瀏覽器不允許直接複製，已放入文字框，請手動複製。');
+    }
+  }
+
+  function buildSvgString(){
+    const W = 1000;
+    const H = 760;
+    const boardX = 54;
+    const boardY = 94;
+    const boardW = 892;
+    const boardH = 612;
+
+    const q = state.quadrantNames;
+
+    let svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" rx="24" fill="${state.colors.bg}"/>
+  <text x="${W/2}" y="52" text-anchor="middle" font-family="system-ui, Noto Sans TC, sans-serif" font-size="30" font-weight="900" fill="${state.colors.text}">${escapeXml(state.title)}</text>
+
+  <clipPath id="boardClip">
+    <rect x="${boardX}" y="${boardY}" width="${boardW}" height="${boardH}" rx="20"/>
+  </clipPath>
+
+  <g clip-path="url(#boardClip)">
+    <rect x="${boardX}" y="${boardY}" width="${boardW/2}" height="${boardH/2}" fill="${state.colors.qTL}"/>
+    <rect x="${boardX + boardW/2}" y="${boardY}" width="${boardW/2}" height="${boardH/2}" fill="${state.colors.qTR}"/>
+    <rect x="${boardX}" y="${boardY + boardH/2}" width="${boardW/2}" height="${boardH/2}" fill="${state.colors.qBL}"/>
+    <rect x="${boardX + boardW/2}" y="${boardY + boardH/2}" width="${boardW/2}" height="${boardH/2}" fill="${state.colors.qBR}"/>
+    <rect x="${boardX + boardW/2 - 1.5}" y="${boardY}" width="3" height="${boardH}" fill="${state.colors.axis}" opacity=".8"/>
+    <rect x="${boardX}" y="${boardY + boardH/2 - 1.5}" width="${boardW}" height="3" fill="${state.colors.axis}" opacity=".8"/>
+  </g>
+
+  <rect x="${boardX}" y="${boardY}" width="${boardW}" height="${boardH}" rx="20" fill="none" stroke="rgba(255,255,255,.16)"/>
+
+  ${svgText(boardX+16, boardY+boardH/2, state.axes.xLeft, 'start', 'middle', 15)}
+  ${svgText(boardX+boardW-16, boardY+boardH/2, state.axes.xRight, 'end', 'middle', 15)}
+  ${svgText(boardX+boardW/2, boardY+28, state.axes.yTop, 'middle', 'middle', 15)}
+  ${svgText(boardX+boardW/2, boardY+boardH-24, state.axes.yBottom, 'middle', 'middle', 15)}
+
+  ${svgText(boardX + boardW*q.qTL.x/100, boardY + boardH*q.qTL.y/100, q.qTL.text, 'middle', 'middle', 15)}
+  ${svgText(boardX + boardW*q.qTR.x/100, boardY + boardH*q.qTR.y/100, q.qTR.text, 'middle', 'middle', 15)}
+  ${svgText(boardX + boardW*q.qBL.x/100, boardY + boardH*q.qBL.y/100, q.qBL.text, 'middle', 'middle', 15)}
+  ${svgText(boardX + boardW*q.qBR.x/100, boardY + boardH*q.qBR.y/100, q.qBR.text, 'middle', 'middle', 15)}
+`;
+
+    state.roles.forEach((r, i) => {
+      const cx = boardX + boardW * r.x / 100;
+      const cy = boardY + boardH * r.y / 100;
+      const size = r.size;
+      const clipId = `clipRole${i}`;
+
+      svg += `
+  <clipPath id="${clipId}">
+    <circle cx="${cx}" cy="${cy-12}" r="${size/2}"/>
+  </clipPath>
+  <circle cx="${cx}" cy="${cy-12}" r="${size/2 + 2}" fill="rgba(255,255,255,.85)"/>
+  <image href="${escapeAttr(r.img)}" x="${cx-size/2}" y="${cy-12-size/2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
+  <text x="${cx}" y="${cy + size/2 + 16}" text-anchor="middle" font-family="system-ui, Noto Sans TC, sans-serif" font-size="13" font-weight="800" fill="${state.colors.text}">${escapeXml(r.name)}</text>
+`;
+    });
+
+    svg += `</svg>`;
+    return svg.trim();
+  }
+
+  function svgText(x,y,text,anchor,baseline,size){
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="${baseline}" font-family="system-ui, Noto Sans TC, sans-serif" font-size="${size}" font-weight="800" fill="${state.colors.text}">${escapeXml(text)}</text>`;
+  }
+
+  function downloadSvg(){
+    const svg = buildSvgString();
+    downloadText(svg, filename('quadrant','svg'), 'image/svg+xml;charset=utf-8');
+  }
+
+  async function downloadRaster(type){
+    const el = $('exportArea');
+
+    try{
+      const canvas = await html2canvas(el, {
+        backgroundColor:null,
+        scale:2,
+        useCORS:true,
+        allowTaint:false
+      });
+
+      const mime = type === 'jpg' ? 'image/jpeg' : 'image/png';
+      const ext = type === 'jpg' ? 'jpg' : 'png';
+
+      const link = document.createElement('a');
+      link.download = filename('quadrant', ext);
+      link.href = canvas.toDataURL(mime, type === 'jpg' ? 0.92 : 1);
+      link.click();
+    }catch(err){
+      alert('圖片輸出失敗。若你使用外部圖片，請改用同 repo 內的本地圖片路徑，例如 images/a.png。\n\n錯誤：' + err.message);
+    }
+  }
+
+  function saveJson(){
+    downloadText(JSON.stringify(state,null,2), filename('quadrant-settings','json'), 'application/json;charset=utf-8');
+  }
+
+  function loadJson(e){
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result);
+        state = parsed;
+        hydrateControlsFromState();
+        renderRolesEditor();
+        renderAll();
+      }catch(err){
+        alert('JSON 載入失敗：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  function downloadText(text, name, mime){
+    const blob = new Blob([text], {type:mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+  }
+
+  function filename(base, ext){
+    const safe = (state.title || base).replace(/[\\/:*?"<>|]/g,'').trim() || base;
+    return `${safe}.${ext}`;
+  }
+
+  function uid(){
+    return 'r_' + Math.random().toString(36).slice(2,10);
+  }
+
+  function num(v, fallback){
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function clamp(n,min,max){
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function formatNum(n){
+    return Number(n).toFixed(1).replace('.0','');
+  }
+
+  function hexToRgba(hex, alpha){
+    const clean = hex.replace('#','');
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#039;'
+    }[s]));
+  }
+
+  function escapeAttr(str){
+    return escapeHtml(str);
+  }
+
+  function escapeXml(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&apos;'
+    }[s]));
+  }
+})();
+</script>
+</body>
+</html>
